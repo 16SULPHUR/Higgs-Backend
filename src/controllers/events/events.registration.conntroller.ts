@@ -1,0 +1,94 @@
+import { Request, Response } from 'express';
+import pool from '../../lib/db.js';
+
+export const getEventRegistrations = async (req: Request, res: Response) => {
+    const { eventId } = req.params;
+    try {
+
+        const eventCheck = await pool.query('SELECT id FROM events WHERE id = $1', [eventId]);
+        if (eventCheck.rowCount === 0) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+
+        const query = `
+            SELECT 
+                u.id, 
+                u.name, 
+                u.email,
+                er.created_at as registration_date
+            FROM users u
+            JOIN event_registrations er ON u.id = er.user_id
+            WHERE er.event_id = $1
+            ORDER BY er.created_at DESC;
+        `;
+
+        const { rows } = await pool.query(query, [eventId]);
+
+        res.json(rows);
+
+    } catch (err) {
+        console.error(`Error fetching registrations for event ${eventId}:`, err);
+        res.status(500).json({ message: 'Failed to fetch event registrations' });
+    }
+};
+
+
+export const registerInEvent = async (req: Request, res: Response) => {
+
+    const { eventId } = req.params;
+    const { id: userId } = req.user;
+
+    console.log(req.body)
+    console.log(userId)
+
+    try {
+
+        const eventCheck = await pool.query('SELECT id FROM events WHERE id = $1', [eventId]);
+
+        if (eventCheck.rowCount === 0) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        const { rows } = await pool.query(
+            'INSERT INTO event_registrations (event_id, user_id) VALUES ($1, $2) RETURNING *',
+            [eventId, userId]
+        );
+
+
+        res.json(rows);
+
+    } catch (err) {
+        console.error(`Error registrating for event ${eventId}:`, err);
+        res.status(500).json({ message: 'Failed to register for event' });
+    }
+}
+
+export const deregisterInEvent = async (req: Request, res: Response) => {
+    const { eventId } = req.params;
+    const { id: userId } = req.user;
+
+    console.log(req.body)
+    console.log(userId)
+
+    try {
+
+        const eventCheck = await pool.query('SELECT id FROM events WHERE id = $1', [eventId]);
+
+        if (eventCheck.rowCount === 0) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        const { rows } = await pool.query(
+            'DELETE FROM event_registrations WHERE event_id = $1 AND user_id = $2 RETURNING *',
+            [eventId, userId]
+        );
+
+
+        res.json(rows);
+
+    } catch (err) {
+        console.error(`Error deregistrating for event ${eventId}:`, err);
+        res.status(500).json({ message: 'Failed to deregister for event' });
+    }
+}

@@ -1,0 +1,51 @@
+{
+  "name": "higgs-workspace",
+  "version": "0.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">= 22.11 < 23"
+  },
+  "devDependencies": {
+    "@eslint/js": "~9.17",
+    "@types/eslint__js": "~8.42",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "~20",
+    "@typescript-eslint/parser": "~8.19",
+    "@vitest/coverage-v8": "~2.1",
+    "@vitest/eslint-plugin": "~1.1",
+    "eslint": "~9.17",
+    "eslint-config-prettier": "~9.1",
+    "globals": "~15.14",
+    "prettier": "~3.4",
+    "rimraf": "~6.0",
+    "ts-api-utils": "~2.0",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.7",
+    "typescript-eslint": "~8.19",
+    "vitest": "~2.1"
+  },
+  "scripts": {
+    "dev": "nodemon --trace-warnings --watch src --ext ts --exec \"node --loader ts-node/esm src/main.ts\"",
+    "build": "tsc",
+    "start": "node build/src/main.js"
+  },
+  "author": "Ankit Patil <16SULPHUR@users.noreply.github.com>",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@react-oauth/google": "^0.12.2",
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "google-auth-library": "^10.1.0",
+    "imagekit": "^6.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.1",
+    "pg": "^8.16.2",
+    "resend": "^4.6.0",
+    "tslib": "~2.8"
+  },
+  "volta": {
+    "node": "22.12.0"
+  }
+}
