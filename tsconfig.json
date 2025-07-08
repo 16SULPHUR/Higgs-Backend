@@ -20,7 +20,8 @@
     "noImplicitThis": false,
     "strictNullChecks": false,
     "allowImportingTsExtensions": false,
-    "noEmit": false
+    "noEmit": false,
+    // "type":"module"
   },
   "ts-node": {
     "esm": true
