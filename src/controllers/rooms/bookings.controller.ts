@@ -36,7 +36,7 @@ export const createBooking = async (req: Request, res: Response) => {
             return res.status(400).json({ message: `Bookings can only be made up to ${MAX_BOOKING_DAYS_AHEAD} days in advance.` });
         }
 
-        // Fetch room and user/org details in one go
+        
         const roomResult = await client.query(
             'SELECT availability, operating_start_time, operating_end_time, credits_per_booking FROM meeting_rooms WHERE id = $1 FOR UPDATE',
             [room_id]

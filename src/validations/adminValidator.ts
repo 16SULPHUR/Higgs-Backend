@@ -16,7 +16,7 @@ export const validateNewAdmin = (data: NewAdminData): string[] => {
         errors.push('name is required and must be a non-empty string.');
     }
 
-    // A simple regex to check for a valid email format
+    
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email || !emailRegex.test(email)) {
         errors.push('A valid email is required.');
@@ -31,13 +31,13 @@ export const validateNewAdmin = (data: NewAdminData): string[] => {
         errors.push(`role is required and must be one of: ${validRoles.join(', ')}.`);
     }
 
-    // Conditional validation for LOCATION_ADMIN
+    
     if (role === 'LOCATION_ADMIN') {
         if (!location_id) {
             errors.push('location_id is required when the role is LOCATION_ADMIN.');
         }
     } else {
-        // For other roles, location_id should not be provided to avoid confusion
+        
         if (location_id) {
             errors.push('location_id should only be provided for the LOCATION_ADMIN role.');
         }

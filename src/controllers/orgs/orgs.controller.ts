@@ -1,5 +1,3 @@
-
-
 import pool from "../../lib/db.js";
 import { Request, Response } from 'express';
 import { validateNewOrg, validateUpdateOrg, validateSetAdmin } from '../../validations/orgValidator.js';
@@ -31,6 +29,7 @@ export const getAllOrgs = async (req: Request, res: Response) => {
 
 export const getOrgById = async (req: Request, res: Response) => {
     const { id } = req.params;
+    console.log("get org by id")
     try {
         const query = `
             SELECT 

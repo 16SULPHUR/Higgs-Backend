@@ -35,7 +35,6 @@ export const searchAvailableRooms = async (req: Request, res: Response) => {
                     FROM bookings b
                     WHERE 
                         b.meeting_room_id = r.id
-                        AND b.status = 'CONFIRMED'
                         -- This condition checks for any overlap between the requested time and existing bookings
                         AND (b.start_time < $3 AND b.end_time > $2)
                 )

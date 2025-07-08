@@ -38,7 +38,7 @@ export const createNewPlan = async (req: Request, res: Response) => {
 
     const { name, plan_credits, price } = req.body;
 
-    // 2. Proceed with database operation
+    
     try {
         const { rows } = await pool.query(
             'INSERT INTO plans (name, plan_credits, price) VALUES ($1, $2, $3) RETURNING *',
@@ -52,7 +52,7 @@ export const createNewPlan = async (req: Request, res: Response) => {
 };
 
 export const updatePlan = async (req: Request, res: Response) => {
-    // 1. Validate input
+    
     console.log(req.body)
     const validationErrors = validateUpdatePlan(req.body);
     if (validationErrors.length > 0) {
@@ -62,7 +62,7 @@ export const updatePlan = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { name, plan_credits, price } = req.body;
 
-    // 2. Build the dynamic query
+    
     try {
         const fields = [];
         const values = [];

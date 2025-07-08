@@ -1,4 +1,5 @@
-// src/services/orgValidator.ts
+
+
 
 interface OrgData {
     name?: string;
@@ -9,22 +10,14 @@ interface AdminData {
     user_id?: string | number;
 }
 
-/**
- * Checks if a value is a valid identifier (non-empty string or positive number).
- * @param id The value to check.
- * @returns True if the ID is valid, otherwise false.
- */
+
 const isValidId = (id: any): boolean => {
     const isString = typeof id === 'string' && id.trim().length > 0;
     const isNumber = typeof id === 'number' && id > 0;
     return isString || isNumber;
 };
 
-/**
- * Validates the data for creating a new organization.
- * @param data The request body.
- * @returns An array of error messages, empty if validation passes.
- */
+
 export const validateNewOrg = (data: OrgData): string[] => {
     const { name, plan_id } = data;
     const errors: string[] = [];

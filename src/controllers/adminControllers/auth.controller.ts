@@ -49,7 +49,7 @@ export const loginAdmin = async (req: Request, res: Response) => {
             [jti, admin.id, expirationDate]
         );
 
-        await client.query('COMMIT'); // Commit the transaction
+        await client.query('COMMIT'); 
         res.json({ token, admin: { name: admin.name, role: admin.role } });
 
     } catch (err) {
@@ -81,7 +81,7 @@ export const logoutAdmin = async (req: Request, res: Response) => {
 
 
 export const registerAdmin = async (req: Request, res: Response) => {
-    // 1. Validate the incoming data
+    
     const validationErrors = validateNewAdmin(req.body);
     if (validationErrors.length > 0) {
         return res.status(400).json({ message: 'Invalid input', errors: validationErrors });
@@ -93,13 +93,13 @@ export const registerAdmin = async (req: Request, res: Response) => {
     try {
         await client.query('BEGIN');
 
-        // 2. Check if an admin with this email already exists
+        
         const existingAdmin = await client.query('SELECT id FROM admins WHERE email = $1', [email]);
         if (existingAdmin.rowCount > 0) {
             return res.status(409).json({ message: 'An admin with this email already exists.' });
         }
         
-        // 3. If it's a Location Admin, verify the location exists
+        
         if (role === ADMIN_ROLES.LOCATION_ADMIN && location_id) {
             const locationCheck = await client.query('SELECT id FROM locations WHERE id = $1', [location_id]);
             if (locationCheck.rowCount === 0) {
@@ -107,14 +107,14 @@ export const registerAdmin = async (req: Request, res: Response) => {
             }
         }
 
-        // 4. Hash the password
+        
         const hashedPassword = await bcrypt.hash(password, parseInt(process.env.SALT!));
 
-        // 5. Insert the new admin into the database
+        
         const { rows } = await client.query(
             `INSERT INTO admins (name, email, password, role, location_id)
              VALUES ($1, $2, $3, $4, $5)
-             RETURNING id, name, email, role, location_id, is_active, created_at`, // IMPORTANT: Never return the password
+             RETURNING id, name, email, role, location_id, is_active, created_at`,
             [name, email, hashedPassword, role, location_id]
         );
 

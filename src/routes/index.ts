@@ -2,7 +2,6 @@ import { Router } from 'express';
 import plansRoutes from './plans.route.js';
 import authRoutes from '../routes/auth.route.js';
 import orgsRoutes from './orgs.route.js';
-import meetingRoomsRoutes from './meetingRooms.route.js';
 import availabilityRoutes from './availability.route.js';
 import bookingsRoutes from './booking.route.js';
 import { authenticate } from '../middleware/auth.js';
@@ -14,6 +13,7 @@ import { authorizeAdmin } from '../middleware/authorizeAdmin.js';
 import adminAuthRoutes from './adminAuthRoutes.js';
 import locationsRoutes from './locationsRoutes.js';
 import usersRoutes from './users.route.js';
+import { adminMeetingRoomsRoutes, meetingRoomsRoutes } from './meetingRooms.route.js';
 
 const router = Router();
 
@@ -30,13 +30,15 @@ router.use('/admin/plans', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.
 
 router.use('/admin/orgs', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), orgsRoutes);
 
-router.use('/admin/events',  adminEventsRoutes);
+router.use('/admin/events', adminEventsRoutes);
 
-router.use('/meeting-rooms',  meetingRoomsRoutes);
+router.use('/meeting-rooms', meetingRoomsRoutes);
+
+router.use('/admin/meeting-rooms', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), adminMeetingRoomsRoutes);
 
 router.use('/admin/assign-credits', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), creditRoutes);
 
-router.use('/admin/locations', locationsRoutes); 
+router.use('/admin/locations', locationsRoutes);
 
 
 export default router;

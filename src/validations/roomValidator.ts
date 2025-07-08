@@ -1,4 +1,5 @@
-// src/services/roomValidator.ts
+
+
 
 interface RoomData {
     name?: string;
@@ -9,20 +10,12 @@ interface RoomData {
     availability?: boolean;
 }
 
-/**
- * Checks if a value is a valid identifier (e.g., a non-empty string for a UUID).
- * @param id The value to check.
- * @returns True if the ID is valid, otherwise false.
- */
+
 const isValidId = (id: any): boolean => {
     return typeof id === 'string' && id.trim().length > 0;
 };
 
-/**
- * Validates the data for creating a new meeting room.
- * @param data The request body.
- * @returns An array of error messages. Returns an empty array if validation passes.
- */
+
 export const validateNewRoom = (data: RoomData): string[] => {
     const { name, type_of_room, location_id, capacity, credits_per_booking, availability } = data;
     const errors: string[] = [];

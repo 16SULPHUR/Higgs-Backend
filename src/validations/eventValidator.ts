@@ -1,4 +1,5 @@
-// src/services/eventValidator.ts
+
+
 
 interface EventData {
     title?: string;
@@ -7,11 +8,7 @@ interface EventData {
     image_url?: string;
 }
 
-/**
- * Validates if a string is a valid URL.
- * @param url The string to validate.
- * @returns True if the string is a valid HTTP/HTTPS URL, false otherwise.
- */
+
 const isValidUrl = (url: string): boolean => {
     try {
         new URL(url);
@@ -21,11 +18,7 @@ const isValidUrl = (url: string): boolean => {
     }
 };
 
-/**
- * Validates data for creating a new event.
- * @param data The request body.
- * @returns An array of error messages, empty if validation passes.
- */
+
 export const validateNewEvent = (data: EventData): string[] => {
     const { title, description, date, image_url } = data;
     const errors: string[] = [];
@@ -49,11 +42,7 @@ export const validateNewEvent = (data: EventData): string[] => {
     return errors;
 };
 
-/**
- * Validates data for updating an event.
- * @param data The request body.
- * @returns An array of error messages, empty if validation passes.
- */
+
 export const validateUpdateEvent = (data: EventData): string[] => {
     const { title, description, date, image_url } = data;
     const errors: string[] = [];
