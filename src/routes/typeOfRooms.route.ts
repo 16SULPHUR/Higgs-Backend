@@ -1,14 +1,12 @@
-import express from 'express';
-import { authorizeAdmin } from '../middleware/authorizeAdmin.js';
+import express from 'express'; 
 import { createRoomType, deleteRoomType, getAllRoomTypes, getRoomTypeById, updateRoomType } from '../controllers/rooms/typeOfRooms.controller.js';
 
-const router = express.Router();
-const allowedRoles = ['SUPER_ADMIN', 'LOCATION_ADMIN'];
+const typeOfRoomsRouter = express.Router(); 
 
-router.get('/admin/', authorizeAdmin(allowedRoles), getAllRoomTypes);
-router.post('/admin/', authorizeAdmin(allowedRoles), createRoomType);
-router.get('/admin/:id', authorizeAdmin(allowedRoles), getRoomTypeById);
-router.patch('/admin/:id', authorizeAdmin(allowedRoles), updateRoomType);
-router.delete('/admin/:id', authorizeAdmin(allowedRoles), deleteRoomType);
+typeOfRoomsRouter.get('/', getAllRoomTypes);
+typeOfRoomsRouter.post('/', createRoomType);
+typeOfRoomsRouter.get('/:id', getRoomTypeById);
+typeOfRoomsRouter.patch('/:id', updateRoomType);
+typeOfRoomsRouter.delete('/:id', deleteRoomType);
 
-export default router;
+export default typeOfRoomsRouter;

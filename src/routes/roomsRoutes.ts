@@ -1,15 +1,13 @@
-import express from 'express';
-import { authorizeAdmin } from '../middleware/authorizeAdmin.js';
+import express from 'express'; 
 import { createRoom, deleteRoom, getAllRooms, getRoomById, updateRoom } from '../controllers/rooms/rooms.controller.js';
 
 
-const router = express.Router();
-const allowedRoles = ['SUPER_ADMIN', 'LOCATION_ADMIN'];
+const roomsRouter = express.Router(); 
 
-router.get('/admin/', authorizeAdmin(allowedRoles), getAllRooms);
-router.post('/admin/', authorizeAdmin(allowedRoles), createRoom);
-router.get('/admin/:id', authorizeAdmin(allowedRoles), getRoomById);
-router.patch('/admin/:id', authorizeAdmin(allowedRoles), updateRoom);
-router.delete('/admin/:id', authorizeAdmin(allowedRoles), deleteRoom);
+roomsRouter.get('/', getAllRooms);
+roomsRouter.post('/', createRoom);
+roomsRouter.get('/:id', getRoomById);
+roomsRouter.patch('/:id', updateRoom);
+roomsRouter.delete('/:id', deleteRoom);
 
-export default router;
+export default roomsRouter;

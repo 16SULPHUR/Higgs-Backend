@@ -4,18 +4,21 @@ import {
     createRoom,
     updateRoom,
     deleteRoom,
-    getRoomById
 } from '../controllers/rooms/meeting_rooms.controller.js';
-import { searchAvailableRooms } from '../controllers/rooms/search.controller.js';
-
+import { searchAvailableRoomTypes } from '../controllers/rooms/search.controller.js';
+import { getAllRoomTypes, getRoomTypeById } from '../controllers/rooms/typeOfRooms.controller.js';
 const meetingRoomsRoutes = express.Router();
 const adminMeetingRoomsRoutes = express.Router();
 
-meetingRoomsRoutes.get('/', getAllRooms);
+// meetingRoomsRoutes.get('/', getAllRooms);
 
-meetingRoomsRoutes.get('/search', searchAvailableRooms);
+meetingRoomsRoutes.get('/', getAllRoomTypes);
 
-meetingRoomsRoutes.get('/:id', getRoomById);
+meetingRoomsRoutes.get('/search', searchAvailableRoomTypes);
+
+// meetingRoomsRoutes.get('/:id', getRoomById);
+
+meetingRoomsRoutes.get('/:id', getRoomTypeById);
 
 adminMeetingRoomsRoutes.get('/', getAllRooms);
 

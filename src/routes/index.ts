@@ -14,6 +14,8 @@ import adminAuthRoutes from './adminAuthRoutes.js';
 import locationsRoutes from './locationsRoutes.js';
 import usersRoutes from './users.route.js';
 import { adminMeetingRoomsRoutes, meetingRoomsRoutes } from './meetingRooms.route.js';
+import typeOfRoomsRouter from './typeOfRooms.route.js';
+import roomsRouter from './roomsRoutes.js';
 
 const router = Router();
 
@@ -33,6 +35,12 @@ router.use('/admin/orgs', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.L
 router.use('/admin/events', adminEventsRoutes);
 
 router.use('/meeting-rooms', meetingRoomsRoutes);
+
+router.use('/admin/room-types',authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), typeOfRoomsRouter )
+
+router.use('/admin/rooms',authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), roomsRouter )
+
+router.use('/admin/room',authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), typeOfRoomsRouter )
 
 router.use('/admin/meeting-rooms', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), adminMeetingRoomsRoutes);
 
