@@ -41,6 +41,8 @@ export const searchAvailableRoomTypes = async (req: Request, res: Response) => {
         `;
 
         const { rows } = await pool.query(query, [capacity, searchStartTimestamp, searchEndTimestamp]);
+
+        console.log(rows)
         
         res.json(rows);
 

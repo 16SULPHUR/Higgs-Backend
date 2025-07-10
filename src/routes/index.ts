@@ -14,7 +14,7 @@ import adminAuthRoutes from './adminAuthRoutes.js';
 import locationsRoutes from './locationsRoutes.js';
 import usersRoutes from './users.route.js';
 import { adminMeetingRoomsRoutes, meetingRoomsRoutes } from './meetingRooms.route.js';
-import typeOfRoomsRouter from './typeOfRooms.route.js';
+import typeOfRoomsRouter from './adminTypeOfRooms.route.js';
 import roomsRouter from './roomsRoutes.js';
 
 const router = Router();
@@ -24,6 +24,7 @@ router.use('/availability', authenticate, availabilityRoutes);
 router.use('/bookings', authenticate, bookingsRoutes);
 router.use('/events', authenticate, eventsRoutes);
 router.use('/profile', authenticate, profileRoutes);
+router.use('/room-types',authenticate, typeOfRoomsRouter )
 
 router.use('/admin/auth', adminAuthRoutes)
 router.use('/admin/users', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), usersRoutes);

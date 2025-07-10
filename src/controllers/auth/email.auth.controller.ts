@@ -76,6 +76,7 @@ export const login = async (req: Request, res: Response) => {
             id: user.id, email: user.email, role: user.role,
             organization_id: user.organization_id, type: 'user', jti: jti
         };
+        
         const token = jwt.sign(tokenPayload, process.env.JWT_SECRET!, { expiresIn: tokenExpiresIn });
 
         
@@ -108,6 +109,8 @@ export const verifyOtp = async (req: Request, res: Response) => {
     try {
       const { rows } = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
       const user = rows[0];
+      console.log(otp)
+      
       if (!user) return res.status(404).json({ message: 'User not found' });
       if (user.is_verified) return res.json({ message: 'Already verified' });
       if (user.otp !== otp || new Date() > user.otp_expires_at)
