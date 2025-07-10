@@ -11,12 +11,12 @@ const MAX_CANCELLATIONS_PER_MONTH = 5;
 
 function parseDateWithOffset(dateStr: string): number {
     const match = dateStr.match(
-        /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})([+-])(\d{2}):(\d{2})$/
+        /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{3}))?(Z|([+-])(\d{2}):(\d{2}))$/
     );
 
     if (!match) throw new Error('Invalid datetime format: ' + dateStr);
 
-    const [, year, month, day, hour, minute, second, sign, offsetH, offsetM] = match;
+    const [, year, month, day, hour, minute, second, , zOrSign, sign, offsetH, offsetM] = match;
 
     const utcTime = Date.UTC(
         +year,
@@ -27,14 +27,22 @@ function parseDateWithOffset(dateStr: string): number {
         +second
     );
 
+    // Handle 'Z' (UTC)
+    if (zOrSign === 'Z') return utcTime;
+
+    // Handle offset
     const offsetMinutes = (+offsetH * 60 + +offsetM) * (sign === '+' ? 1 : -1);
     return utcTime - offsetMinutes * 60 * 1000;
 }
 
 
+
 export const createBooking = async (req: Request, res: Response) => {
     const { type_of_room_id, start_time, end_time } = req.body;
     const user = (req as any).user;
+
+    console.log("create booking")
+    console.log(req.body)
 
     if (!type_of_room_id || !start_time || !end_time) {
         return res.status(400).json({ message: 'Room type, start time, and end time are required.' });
@@ -426,7 +434,7 @@ export const rescheduleBooking = async (req: Request, res: Response) => {
 
             const emailPromises = guestsResult.rows.map(guest => 
                 resend.emails.send({
-                    from: `Higgs Workspace <updates@yourdomain.com>`,
+                    from: `Higgs Workspace <${process.env.INVITE_EMAIL_FROM}>`,
                     to: guest.guest_email,
                     subject: `Update: Your Meeting at Higgs Workspace has been Rescheduled`,
                     html: `
