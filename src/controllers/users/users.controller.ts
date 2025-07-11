@@ -56,3 +56,27 @@ export const removeUserFromOrg = async (req: Request, res: Response) => {
     }
 };
 
+export const getAllUsersForMemberBook = async (req: Request, res: Response) => {
+    console.log(req.user)
+    try {
+        const query = `
+            SELECT 
+                u.id, 
+                u.name, 
+                u.email, 
+                u.profile_picture,
+                o.name as organization_name
+            FROM users u
+            LEFT JOIN organizations o ON u.organization_id = o.id
+            WHERE 
+                u.is_verified = TRUE 
+                AND u.role IN ('INDIVIDUAL_USER', 'ORG_USER', 'ORG_ADMIN')
+            ORDER BY u.name ASC;
+        `;
+        const { rows } = await pool.query(query);
+        res.json(rows);
+    } catch (err) {
+        console.error('Error fetching users for member book:', err);
+        res.status(500).json({ message: 'Failed to fetch members.' });
+    }
+};
