@@ -1,13 +1,16 @@
 import express from 'express';
-import { addUserToOrg, getAllUsers, removeUserFromOrg } from '../controllers/users/users.controller.js';
+import { addUserToOrg, getAllUsers, getAllUsersForMemberBook, removeUserFromOrg } from '../controllers/users/users.controller.js';
 import { authorizeAdmin } from '../middleware/authorizeAdmin.js';
 
+const adminUsersRoutes = express.Router();
 const usersRoutes = express.Router();
 
 
-usersRoutes.get('/', getAllUsers);
-usersRoutes.patch('/:id', authorizeAdmin(['SUPER_ADMIN']), addUserToOrg);
-usersRoutes.delete('/remove/:id', removeUserFromOrg);
+usersRoutes.get('/member-book', getAllUsersForMemberBook);
+
+adminUsersRoutes.get('/', getAllUsers);
+adminUsersRoutes.patch('/:id', authorizeAdmin(['SUPER_ADMIN']), addUserToOrg);
+adminUsersRoutes.delete('/remove/:id', removeUserFromOrg);
 
 
-export default usersRoutes;
+export {adminUsersRoutes, usersRoutes};

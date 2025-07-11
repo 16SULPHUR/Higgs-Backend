@@ -11,12 +11,12 @@ import creditRoutes from './credits.route.js';
 import { adminEventsRoutes, eventsRoutes } from './events.route.js';
 import { authorizeAdmin } from '../middleware/authorizeAdmin.js';
 import adminAuthRoutes from './adminAuthRoutes.js';
-import locationsRoutes from './locationsRoutes.js';
-import usersRoutes from './users.route.js';
+import locationsRoutes from './locationsRoutes.js'; 
 import { adminMeetingRoomsRoutes, meetingRoomsRoutes } from './meetingRooms.route.js';
 import typeOfRoomsRouter from './adminTypeOfRooms.route.js';
 import roomsRouter from './roomsRoutes.js';
-import adminBookingRoutes from './adminBooking.route.js';
+import adminBookingRoutes from './adminBooking.route.js';  
+import { adminUsersRoutes, usersRoutes } from './users.route.js';
 
 const router = Router();
 
@@ -26,9 +26,10 @@ router.use('/bookings', authenticate, bookingsRoutes);
 router.use('/events', authenticate, eventsRoutes);
 router.use('/profile', authenticate, profileRoutes);
 router.use('/room-types',authenticate, typeOfRoomsRouter )
+router.use('/users',authenticate, usersRoutes)
 
 router.use('/admin/auth', adminAuthRoutes)
-router.use('/admin/users', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), usersRoutes);
+router.use('/admin/users', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), adminUsersRoutes);
 
 router.use('/admin/plans', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), plansRoutes);
 
