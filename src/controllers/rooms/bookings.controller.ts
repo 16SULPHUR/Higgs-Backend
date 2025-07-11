@@ -11,12 +11,16 @@ const MAX_CANCELLATIONS_PER_MONTH = 5;
 
 function parseDateWithOffset(dateStr: string): number {
     const match = dateStr.match(
-        /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{3}))?(Z|([+-])(\d{2}):(\d{2}))$/
-    );
+        /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?([+-])(\d{2}):(\d{2})$/
+    ); // Allow optional milliseconds
+    
+    // const match = dateStr.match(
+    //     /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})([+-])(\d{2}):(\d{2})$/
+    // );
 
     if (!match) throw new Error('Invalid datetime format: ' + dateStr);
 
-    const [, year, month, day, hour, minute, second, , zOrSign, sign, offsetH, offsetM] = match;
+    const [, year, month, day, hour, minute, second, sign, offsetH, offsetM] = match;
 
     const utcTime = Date.UTC(
         +year,
@@ -27,13 +31,10 @@ function parseDateWithOffset(dateStr: string): number {
         +second
     );
 
-    // Handle 'Z' (UTC)
-    if (zOrSign === 'Z') return utcTime;
-
-    // Handle offset
     const offsetMinutes = (+offsetH * 60 + +offsetM) * (sign === '+' ? 1 : -1);
     return utcTime - offsetMinutes * 60 * 1000;
 }
+
 
 
 
