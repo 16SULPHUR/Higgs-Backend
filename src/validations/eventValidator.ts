@@ -44,6 +44,7 @@ export const validateNewEvent = (data: EventData): string[] => {
 
 
 export const validateUpdateEvent = (data: EventData): string[] => {
+    console.log(data);
     const { title, description, date, image_url } = data;
     const errors: string[] = [];
     const fields = [title, description, date, image_url];

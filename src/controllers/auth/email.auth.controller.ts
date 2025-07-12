@@ -6,13 +6,13 @@ import { v4 as uuidv4 } from 'uuid';
 import { Request, Response } from 'express';
 
 export const register = async (req: Request, res: Response) => {
-    
+
     const { name, email, password, phone, location_id } = req.body;
 
-    
+
     if (!name || !email || !password || !phone || !location_id) {
-        return res.status(400).json({ 
-            message: 'All fields are required: name, email, password, phone, and location_id.' 
+        return res.status(400).json({
+            message: 'All fields are required: name, email, password, phone, and location_id.'
         });
     }
 
@@ -57,7 +57,7 @@ export const login = async (req: Request, res: Response) => {
 
     try {
         await dbClient.query('BEGIN');
-        
+
         const { rows } = await dbClient.query('SELECT * FROM users WHERE email = $1', [email]);
         const user = rows[0];
         if (!user) return res.status(404).json({ message: 'User not found' });
@@ -67,19 +67,32 @@ export const login = async (req: Request, res: Response) => {
         const match = await bcrypt.compare(password, user.password);
         if (!match) return res.status(401).json({ message: 'Invalid credentials' });
 
-        
+
         const jti = uuidv4();
         const tokenExpiresIn = '1d';
         const expirationDate = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
         const tokenPayload = {
-            id: user.id, email: user.email, role: user.role,
-            organization_id: user.organization_id, type: 'user', jti: jti
+            id: user.id,
+            name: user.name,
+            role: user.role,
+            organization_id: user.organization_id,
+            type: 'user',
+            jti: jti
         };
-        
+
+        // const payload = {
+        //     adminId: admin.id,
+        //     role: admin.role,
+        //     locationId: admin.location_id,
+        //     type: 'admin',
+        //     jti: jti
+        // };
+        // const token = jwt.sign(payload, process.env.JWT_SECRET!, { expiresIn: tokenExpiresIn });
+
         const token = jwt.sign(tokenPayload, process.env.JWT_SECRET!, { expiresIn: tokenExpiresIn });
 
-        
+
         await dbClient.query(
             `INSERT INTO active_sessions (jti, subject_id, subject_type, expires_at)
              VALUES ($1, $2, 'USER', $3)`,
@@ -107,26 +120,26 @@ export const login = async (req: Request, res: Response) => {
 export const verifyOtp = async (req: Request, res: Response) => {
     const { email, otp } = req.body;
     try {
-      const { rows } = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-      const user = rows[0];
-      console.log(otp)
-      
-      if (!user) return res.status(404).json({ message: 'User not found' });
-      if (user.is_verified) return res.json({ message: 'Already verified' });
-      if (user.otp !== otp || new Date() > user.otp_expires_at)
-        return res.status(400).json({ message: 'Invalid or expired OTP' });
-      await pool.query(`
+        const { rows } = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+        const user = rows[0];
+        console.log(otp)
+
+        if (!user) return res.status(404).json({ message: 'User not found' });
+        if (user.is_verified) return res.json({ message: 'Already verified' });
+        if (user.otp !== otp || new Date() > user.otp_expires_at)
+            return res.status(400).json({ message: 'Invalid or expired OTP' });
+        await pool.query(`
         UPDATE users SET is_verified = true, otp = NULL, otp_expires_at = NULL
         WHERE email = $1
       `, [email]);
-      res.json({ message: 'Email verified successfully' });
+        res.json({ message: 'Email verified successfully' });
     } catch (err) {
-      res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
 export const getMe = async (req: Request, res: Response) => {
-    const user = (req as any).user; 
+    const user = (req as any).user;
     console.log("user")
     console.log(user)
 
@@ -137,6 +150,8 @@ export const getMe = async (req: Request, res: Response) => {
                 u.name, 
                 u.email, 
                 u.role,
+                u.phone,
+                u.profile_picture,
                 u.individual_credits,
                 o.id as organization_id,
                 o.name as organization_name,
@@ -150,7 +165,7 @@ export const getMe = async (req: Request, res: Response) => {
         if (rows.length === 0) {
             return res.status(404).json({ message: 'User not found.' });
         }
-        
+
         res.json(rows[0]);
 
     } catch (err) {

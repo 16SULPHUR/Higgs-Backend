@@ -1,12 +1,13 @@
 import { Request, Response } from 'express';
 import pool from '../../lib/db.js';
+import uploadImage from '../../services/uploadImage.js';
 
 export const getProfile = async (req: Request, res: Response) => {
     console.log(req.body)
-    try{
+    try {
         const result = await pool.query('SELECT name, email, phone FROM users WHERE id = $1', [req.user.id]);
 
-        if(result.rows.length < 0){
+        if (result.rows.length < 0) {
             res.status(404).json({ message: 'user not found' });
         }
 
@@ -20,46 +21,52 @@ export const getProfile = async (req: Request, res: Response) => {
     }
 }
 
-export const updateProfile = async (req: Request, res: Response) => {
-    console.log(req.body)
-    const {name, email, phone} = req.body;
+export const updateUserProfile = async (req: Request, res: Response) => {
+    const user = (req as any).user;
+    const { name, phone } = req.body;
+    const file = req.file;
+
+    const client = await pool.connect();
 
     try {
         const fields = [];
         const values = [];
         let i = 1;
 
-        if (name != null) {
+        if (name) {
             fields.push(`name = $${i++}`);
             values.push(name);
         }
-        if (email != null) {
-            fields.push(`email = $${i++}`);
-            values.push(email);
-        }
-        if (phone != null) {
+        if (phone) {
             fields.push(`phone = $${i++}`);
             values.push(phone);
         }
 
-        
-        if (fields.length === 0) {
-            return res.status(400).json({ message: 'No valid fields provided for update.' });
+        if (file) {
+            const imageUrl = await uploadImage(file);
+            fields.push(`profile_picture = $${i++}`);
+            values.push(imageUrl);
         }
 
-        values.push(req.user.id);
+        if (fields.length === 0) {
+            return res.status(400).json({ message: 'No fields to update were provided.' });
+        }
 
-        const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${i} RETURNING name, email, phone`;
+        values.push(user.id);
+        const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${i} RETURNING id, name, email, phone, profile_picture`;
 
-        const { rows, rowCount } = await pool.query(query, values);
+        const { rows, rowCount } = await client.query(query, values);
 
         if (rowCount === 0) {
-            return res.status(404).json({ message: 'User not found' });
+            return res.status(404).json({ message: 'User not found.' });
         }
 
-        res.json(rows[0]);
+        res.status(200).json(rows[0]);
+
     } catch (err) {
-        console.error(`Error updating user ${req.user.id}:`, err);
-        res.status(500).json({ message: 'Failed to update user' });
+        console.error('Update profile error:', err);
+        res.status(500).json({ message: 'Failed to update profile.' });
+    } finally {
+        client.release();
     }
-}
+};
