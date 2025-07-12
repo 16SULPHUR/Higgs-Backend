@@ -1,16 +1,32 @@
 import express from 'express';
 import { createNewOrg, deleteOrg, getAllOrgs, getCurrentOrgPlan, getOrgById, setAdmin, updateOrg } from '../controllers/orgs/orgs.controller.js';
+import { getOwnOrgProfile, updateOwnOrgProfile } from '../controllers/orgs/orgProfile.controller.js';
+import multer from 'multer';
 
-const orgsRoutes = express.Router();
+const adminOrgsRoutes = express.Router();
+const orgAdminOrgsRoutes = express.Router();
+ 
+const upload = multer({ storage: multer.memoryStorage() });
 
-orgsRoutes.get('/', getAllOrgs);
-orgsRoutes.get('/:id', getOrgById);
-orgsRoutes.post('/', createNewOrg);
-orgsRoutes.patch('/:id', updateOrg);
-orgsRoutes.delete('/:id', deleteOrg);
+adminOrgsRoutes.get('/', getAllOrgs);
+adminOrgsRoutes.get('/:id', getOrgById);
+adminOrgsRoutes.post('/', createNewOrg);
+adminOrgsRoutes.patch('/:id', updateOrg);
+adminOrgsRoutes.delete('/:id', deleteOrg);
 
-orgsRoutes.post('/:orgId/set-admin', setAdmin);
-orgsRoutes.get('/:orgId/plan', getCurrentOrgPlan);
+adminOrgsRoutes.post('/:orgId/set-admin', setAdmin);
+adminOrgsRoutes.get('/:orgId/plan', getCurrentOrgPlan);
+
+orgAdminOrgsRoutes.get(
+    '/profile',
+    getOwnOrgProfile
+);
+
+orgAdminOrgsRoutes.patch(
+    '/profile',
+    upload.single('logo_image'),
+    updateOwnOrgProfile
+);
 
 
-export default orgsRoutes;
+export {adminOrgsRoutes, orgAdminOrgsRoutes};

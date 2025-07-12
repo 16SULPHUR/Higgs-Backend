@@ -129,7 +129,7 @@ export const deleteOrg = async (req: Request, res: Response) => {
         res.status(500).json({ message: 'Failed to delete organization' });
     }
 };
-
+ 
 export const setAdmin = async (req: Request, res: Response) => {
     const validationErrors = validateSetAdmin(req.body);
     if (validationErrors.length > 0) {
@@ -137,35 +137,48 @@ export const setAdmin = async (req: Request, res: Response) => {
     }
 
     const { orgId } = req.params;
-    const { user_id } = req.body;
+    const { user_id: newAdminId } = req.body;
+
+    const client = await pool.connect();
 
     try {
-        
-        const userResult = await pool.query('SELECT organization_id FROM users WHERE id = $1', [user_id]);
+        await client.query('BEGIN');
 
-        if (userResult.rowCount === 0) {
-            return res.status(404).json({ message: `User with id ${user_id} not found.` });
-        }
-
-        
-        if (String(userResult.rows[0].organization_id) !== String(orgId)) {
-            return res.status(403).json({ message: 'User is not a member of this organization.' });
-        }
-
-        
-        const orgResult = await pool.query(
-            'UPDATE organizations SET org_admin_id = $1 WHERE id = $2',
-            [user_id, orgId]
-        );
-
+        const orgResult = await client.query('SELECT org_admin_id FROM organizations WHERE id = $1 FOR UPDATE', [orgId]);
         if (orgResult.rowCount === 0) {
-            return res.status(404).json({ message: `Organization with id ${orgId} not found.` });
+            await client.query('ROLLBACK');
+            return res.status(404).json({ message: 'Organization not found.' });
         }
+        const previousAdminId = orgResult.rows[0].org_admin_id;
 
-        res.status(200).json({ message: 'Organization admin assigned successfully.' });
+        const userResult = await client.query('SELECT organization_id FROM users WHERE id = $1', [newAdminId]);
+        if (userResult.rowCount === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ message: `User with id ${newAdminId} not found.` });
+        }
+        if (String(userResult.rows[0].organization_id) !== String(orgId)) {
+            await client.query('ROLLBACK');
+            return res.status(403).json({ message: 'User must be a member of the organization to be made an admin.' });
+        }
+        
+        if (previousAdminId) {
+            await client.query(`UPDATE users SET role = 'ORG_USER' WHERE id = $1`, [previousAdminId]);
+        }
+        
+        await client.query(`UPDATE users SET role = 'ORG_ADMIN' WHERE id = $1`, [newAdminId]);
+        
+        await client.query('UPDATE organizations SET org_admin_id = $1 WHERE id = $2', [newAdminId, orgId]);
+
+        await client.query('COMMIT');
+        
+        res.status(200).json({ message: 'Organization admin updated successfully.' });
+
     } catch (err) {
+        await client.query('ROLLBACK');
         console.error(`Error setting admin for organization ${orgId}:`, err);
-        res.status(500).json({ message: 'Failed to assign organization admin' });
+        res.status(500).json({ message: 'Failed to assign organization admin due to a server error.' });
+    } finally {
+        client.release();
     }
 };
 

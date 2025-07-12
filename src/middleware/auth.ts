@@ -58,8 +58,9 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
 };
 
 export const authorize = (roles: string[]) => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    const user = (req as any).user;
+    return (req: Request, res: Response, next: NextFunction) => {
+        const user = (req as any).user;
+        console.log(user)
     if (!user || !roles.includes(user.role)) {
       return res.status(403).json({ message: 'Forbidden' });
     }

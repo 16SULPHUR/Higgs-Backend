@@ -1,11 +1,10 @@
 import { Router } from 'express';
 import plansRoutes from './plans.route.js';
 import authRoutes from '../routes/auth.route.js';
-import orgsRoutes from './orgs.route.js';
 import availabilityRoutes from './availability.route.js';
 import bookingsRoutes from './booking.route.js';
-import { authenticate } from '../middleware/auth.js';
-import { ADMIN_ROLES } from '../lib/constants.js';
+import { authenticate, authorize } from '../middleware/auth.js';
+import { ADMIN_ROLES, ROLES } from '../lib/constants.js';
 import profileRoutes from './profile.route.js';
 import creditRoutes from './credits.route.js';
 import { adminEventsRoutes, eventsRoutes } from './events.route.js';
@@ -16,7 +15,8 @@ import { adminMeetingRoomsRoutes, meetingRoomsRoutes } from './meetingRooms.rout
 import typeOfRoomsRouter from './adminTypeOfRooms.route.js';
 import roomsRouter from './roomsRoutes.js';
 import adminBookingRoutes from './adminBooking.route.js';
-import { adminUsersRoutes, usersRoutes } from './users.route.js'; 
+import { adminUsersRoutes, usersRoutes } from './users.route.js';
+import { adminOrgsRoutes, orgAdminOrgsRoutes } from './orgs.route.js';
 
 const router = Router();
 
@@ -27,7 +27,9 @@ router.use('/events', authenticate, eventsRoutes);
 router.use('/profile', authenticate, profileRoutes);
 router.use('/room-types', authenticate, typeOfRoomsRouter)
 router.use('/users', authenticate, usersRoutes)
-  
+
+router.use('/orgs', authenticate, authorize([ROLES.ORG_ADMIN]), orgAdminOrgsRoutes)
+
 
 
 router.use('/admin/auth', adminAuthRoutes)
@@ -35,7 +37,7 @@ router.use('/admin/users', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.
 
 router.use('/admin/plans', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), plansRoutes);
 
-router.use('/admin/orgs', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), orgsRoutes);
+router.use('/admin/orgs', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), adminOrgsRoutes);
 
 router.use('/admin/events', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), adminEventsRoutes);
 
