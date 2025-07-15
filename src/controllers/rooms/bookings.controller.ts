@@ -13,7 +13,7 @@ function parseDateWithOffset(dateStr: string): number {
     const match = dateStr.match(
         /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?([+-])(\d{2}):(\d{2})$/
     ); // Allow optional milliseconds
-    
+
     // const match = dateStr.match(
     //     /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})([+-])(\d{2}):(\d{2})$/
     // );
@@ -102,20 +102,14 @@ export const createBooking = async (req: Request, res: Response) => {
         const roomCost = roomTypeResult.rows[0].credits_per_booking;
         let hasSufficientCredits = false;
 
-        if (user.role === 'INDIVIDUAL_USER' || user.role === 'ORG_ADMIN') {
-            const userCreditsResult = await client.query(
-                'SELECT individual_credits FROM users WHERE id = $1',
-                [user.id]
-            );
-            if (userCreditsResult.rows[0]?.individual_credits >= roomCost) {
+        if (user.role === 'ORG_ADMIN' || user.role === 'ORG_USER') {
+            const orgCreditsResult = await client.query('SELECT credits_pool FROM organizations WHERE id = $1', [user.organization_id]);
+            if (orgCreditsResult.rows[0]?.credits_pool >= roomCost) {
                 hasSufficientCredits = true;
             }
-        } else if (user.role === 'ORG_USER') {
-            const orgCreditsResult = await client.query(
-                'SELECT credits_pool FROM organizations WHERE id = $1',
-                [user.organization_id]
-            );
-            if (orgCreditsResult.rows[0]?.credits_pool >= roomCost) {
+        } else if (user.role === 'INDIVIDUAL_USER') {
+            const userCreditsResult = await client.query('SELECT individual_credits FROM users WHERE id = $1', [user.id]);
+            if (userCreditsResult.rows[0]?.individual_credits >= roomCost) {
                 hasSufficientCredits = true;
             }
         }
@@ -160,16 +154,14 @@ export const createBooking = async (req: Request, res: Response) => {
 
         const allocatedRoomId = availableRoomResult.rows[0].id;
 
-        if (user.role === 'INDIVIDUAL_USER' || user.role === 'ORG_ADMIN') {
-            await client.query(
-                'UPDATE users SET individual_credits = individual_credits - $1 WHERE id = $2',
-                [roomCost, user.id]
-            );
-        } else if (user.role === 'ORG_USER') {
-            await client.query(
-                'UPDATE organizations SET credits_pool = credits_pool - $1 WHERE id = $2',
-                [roomCost, user.organization_id]
-            );
+
+        console.log("roomCost, user.role============")
+        console.log(roomCost, user.role)
+
+        if (user.role === 'ORG_ADMIN' || user.role === 'ORG_USER') {
+            await client.query('UPDATE organizations SET credits_pool = credits_pool - $1 WHERE id = $2', [roomCost, user.organization_id]);
+        } else if (user.role === 'INDIVIDUAL_USER') {
+            await client.query('UPDATE users SET individual_credits = individual_credits - $1 WHERE id = $2', [roomCost, user.id]);
         }
 
         const insertQuery = `
@@ -213,8 +205,11 @@ export const cancelBooking = async (req: Request, res: Response) => {
             `SELECT 
                 b.start_time, 
                 b.status,
+                u.role as user_role,
+                u.organization_id,
                 tor.credits_per_booking
              FROM bookings b
+             JOIN users u ON b.user_id = u.id
              JOIN rooms r ON b.room_id = r.id
              JOIN type_of_rooms tor ON r.type_of_room_id = tor.id
              WHERE b.id = $1 AND b.user_id = $2`,
@@ -233,7 +228,6 @@ export const cancelBooking = async (req: Request, res: Response) => {
             return res.status(400).json({ message: `This booking cannot be cancelled as its status is '${booking.status}'.` });
         }
 
-        // Step 3: Check if the cancellation is within the allowed time window.
         const bookingStartTime = new Date(booking.start_time);
         const now = new Date();
         const cancellationDeadline = new Date(bookingStartTime.getTime() - CANCELLATION_MINUTES_BEFORE * 60000);
@@ -243,7 +237,6 @@ export const cancelBooking = async (req: Request, res: Response) => {
             return res.status(403).json({ message: `Bookings must be cancelled at least ${CANCELLATION_MINUTES_BEFORE} minutes in advance.` });
         }
 
-        // Step 4: Check if the user has exceeded their monthly cancellation limit.
         const monthlyCancellationsResult = await client.query(
             `SELECT COUNT(*) FROM bookings 
              WHERE user_id = $1 AND status = 'CANCELLED' 
@@ -258,15 +251,15 @@ export const cancelBooking = async (req: Request, res: Response) => {
             return res.status(403).json({ message: 'You have reached your monthly cancellation limit.' });
         }
 
-        // Step 5: Refund the credits to the appropriate pool.
+        // --- THIS IS THE ONLY MODIFIED LOGIC BLOCK ---
         const creditsToRefund = booking.credits_per_booking;
-        if (user.role === 'INDIVIDUAL_USER' || user.role === 'ORG_ADMIN') {
+        if (booking.user_role === 'ORG_ADMIN' || booking.user_role === 'ORG_USER') {
+            await client.query('UPDATE organizations SET credits_pool = credits_pool + $1 WHERE id = $2', [creditsToRefund, booking.organization_id]);
+        } else if (booking.user_role === 'INDIVIDUAL_USER') {
             await client.query('UPDATE users SET individual_credits = individual_credits + $1 WHERE id = $2', [creditsToRefund, user.id]);
-        } else if (user.role === 'ORG_USER') {
-            await client.query('UPDATE organizations SET credits_pool = credits_pool + $1 WHERE id = $2', [creditsToRefund, user.organization_id]);
         }
+        // ---------------------------------------------
 
-        // Step 6: Update the booking status to 'CANCELLED'.
         const { rows } = await client.query(
             `UPDATE bookings SET status = 'CANCELLED' WHERE id = $1 RETURNING *`,
             [bookingId]
@@ -284,6 +277,7 @@ export const cancelBooking = async (req: Request, res: Response) => {
         client.release();
     }
 };
+
 
 
 export const listUserBookings = async (req: Request, res: Response) => {
@@ -314,7 +308,7 @@ export const getBookingById = async (req: Request, res: Response) => {
         return res.status(400).json({ message: 'Booking ID is required.' });
     }
 
-    try { 
+    try {
         const query = `
             SELECT 
                 b.id, 
@@ -330,13 +324,13 @@ export const getBookingById = async (req: Request, res: Response) => {
              JOIN type_of_rooms tor ON r.type_of_room_id = tor.id
              WHERE b.id = $1;
         `;
-        
+
         const { rows, rowCount } = await pool.query(query, [bookingId]);
 
         if (rowCount === 0) {
             return res.status(404).json({ message: 'Booking not found.' });
         }
-        
+
         const booking = rows[0];
 
         if (booking.user_id !== user.id) {
@@ -353,7 +347,7 @@ export const getBookingById = async (req: Request, res: Response) => {
     }
 };
 
- 
+
 export const rescheduleBooking = async (req: Request, res: Response) => {
     const { bookingId } = req.params;
     const { new_type_of_room_id, new_start_time, new_end_time } = req.body;
@@ -400,11 +394,14 @@ export const rescheduleBooking = async (req: Request, res: Response) => {
         const newAllocatedRoomId = availableRoomResult.rows[0].id;
         
         const creditDifference = oldBooking.old_cost - newCost;
-        if (user.role === 'INDIVIDUAL_USER' || user.role === 'ORG_ADMIN') {
-            await client.query('UPDATE users SET individual_credits = individual_credits + $1 WHERE id = $2', [creditDifference, user.id]);
-        } else {
+        
+        // --- THIS IS THE ONLY MODIFIED LOGIC BLOCK ---
+        if (user.role === 'ORG_ADMIN' || user.role === 'ORG_USER') {
             await client.query('UPDATE organizations SET credits_pool = credits_pool + $1 WHERE id = $2', [creditDifference, user.organization_id]);
+        } else if (user.role === 'INDIVIDUAL_USER') {
+            await client.query('UPDATE users SET individual_credits = individual_credits + $1 WHERE id = $2', [creditDifference, user.id]);
         }
+        // ---------------------------------------------
         
         const { rows: updatedBookingRows } = await client.query(
             `UPDATE bookings SET room_id = $1, start_time = $2, end_time = $3, status = 'CONFIRMED' WHERE id = $4 RETURNING *`,
@@ -412,8 +409,6 @@ export const rescheduleBooking = async (req: Request, res: Response) => {
         );
 
         const guestsResult = await client.query('SELECT guest_name, guest_email FROM guest_invitations WHERE booking_id = $1', [bookingId]);
-
-        console.log(guestsResult)
         
         if (guestsResult.rows.length > 0) { 
             const inviterResult = await client.query('SELECT name FROM users WHERE id = $1', [user.id]);
@@ -435,25 +430,10 @@ export const rescheduleBooking = async (req: Request, res: Response) => {
 
             const emailPromises = guestsResult.rows.map(guest => 
                 resend.emails.send({
-                    from: `Higgs Workspace <${process.env.INVITE_EMAIL_FROM}>`,
+                    from: `Higgs Workspace <updates@yourdomain.com>`,
                     to: guest.guest_email,
                     subject: `Update: Your Meeting at Higgs Workspace has been Rescheduled`,
-                    html: `
-                        <div style="font-family: sans-serif; padding: 20px; color: #333;">
-                            <h2>Hello ${guest.guest_name},</h2>
-                            <p>Please note, your meeting with <strong>${inviter_name}</strong> has been updated.</p>
-                            <p style="color: #d9534f;">Please disregard any previous invitations.</p>
-                            <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-top: 20px;">
-                                <h3 style="margin-top: 0;">New Meeting Details</h3>
-                                <p><strong>Room:</strong> ${detailsForEmail.room_type_name} (${detailsForEmail.room_instance_name})</p>
-                                <p><strong>Date:</strong> ${newDate}</p>
-                                <p><strong>Time:</strong> ${newStartTime} - ${newEndTime} (IST)</p>
-                                <p><strong>Location:</strong> ${detailsForEmail.location_name}</p>
-                                <p style="font-size: 0.9em; color: #555;">${detailsForEmail.location_address}</p>
-                            </div>
-                            <p style="margin-top: 30px; font-size: 0.8em; color: #777;">This is an automated notification.</p>
-                        </div>
-                    `
+                    html: `<div style="font-family: sans-serif; padding: 20px; color: #333;"><h2>Hello ${guest.guest_name},</h2><p>Please note, your meeting with <strong>${inviter_name}</strong> has been updated.</p><p style="color: #d9534f;">Please disregard any previous invitations.</p><div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-top: 20px;"><h3 style="margin-top: 0;">New Meeting Details</h3><p><strong>Room:</strong> ${detailsForEmail.room_type_name} (${detailsForEmail.room_instance_name})</p><p><strong>Date:</strong> ${newDate}</p><p><strong>Time:</strong> ${newStartTime} - ${newEndTime} (IST)</p><p><strong>Location:</strong> ${detailsForEmail.location_name}</p><p style="font-size: 0.9em; color: #555;">${detailsForEmail.location_address}</p></div><p style="margin-top: 30px; font-size: 0.8em; color: #777;">This is an automated notification.</p></div>`
                 })
             );
 

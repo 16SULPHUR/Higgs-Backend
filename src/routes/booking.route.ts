@@ -14,16 +14,16 @@ const bookingsRoutes = express.Router();
 
 bookingsRoutes.post('/', authorize([ROLES.ADMIN, ROLES.ORG_ADMIN, ROLES.INDIVIDUAL_USER]), createBooking);
 
-bookingsRoutes.get('/', listUserBookings);
+bookingsRoutes.get('/', authorize([ROLES.ADMIN, ROLES.ORG_ADMIN, ROLES.INDIVIDUAL_USER]), listUserBookings);
 
-bookingsRoutes.get('/:id', getBookingById);
+bookingsRoutes.get('/:id', authorize([ROLES.ADMIN, ROLES.ORG_ADMIN, ROLES.INDIVIDUAL_USER]), getBookingById);
 
-bookingsRoutes.delete('/:id', cancelBooking);
+bookingsRoutes.delete('/:id', authorize([ROLES.ADMIN, ROLES.ORG_ADMIN, ROLES.INDIVIDUAL_USER]), cancelBooking);
 
-bookingsRoutes.post('/:bookingId/invite', inviteGuestToBooking);
+bookingsRoutes.post('/:bookingId/invite', authorize([ROLES.ADMIN, ROLES.ORG_ADMIN, ROLES.INDIVIDUAL_USER]), inviteGuestToBooking);
 
-bookingsRoutes.get('/:bookingId/invitations', getBookingInvitations);
+bookingsRoutes.get('/:bookingId/invitations', authorize([ROLES.ADMIN, ROLES.ORG_ADMIN, ROLES.INDIVIDUAL_USER]), getBookingInvitations);
 
-bookingsRoutes.post('/:bookingId/reschedule', rescheduleBooking);
+bookingsRoutes.post('/:bookingId/reschedule', authorize([ROLES.ADMIN, ROLES.ORG_ADMIN, ROLES.INDIVIDUAL_USER]), rescheduleBooking);
 
 export default bookingsRoutes;

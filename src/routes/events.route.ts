@@ -14,7 +14,11 @@ import { authorizeAdmin } from '../middleware/authorizeAdmin.js';
 
 const storage = multer.memoryStorage()
 
-const upload = multer({ storage: storage })
+const upload = multer({
+    storage: storage, limits: {
+        fileSize: 5 * 1024 * 1024, // 5 MB
+    }
+})
 
 const adminEventsRoutes = express.Router();
 const eventsRoutes = express.Router();
@@ -23,9 +27,9 @@ adminEventsRoutes.get('/', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.
 
 adminEventsRoutes.get('/:id', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), getEventById);
 
-adminEventsRoutes.post('/', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), upload.single("eventImage"), createEvent);
+adminEventsRoutes.post('/', upload.single("eventImage"), authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), createEvent);
 
-adminEventsRoutes.patch('/:id', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), updateEvent);
+adminEventsRoutes.patch('/:id', upload.single("eventImage"), authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), updateEvent);
 
 adminEventsRoutes.delete('/:id', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), deleteEvent);
 

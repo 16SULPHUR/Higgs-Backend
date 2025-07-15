@@ -2,7 +2,7 @@
 
 import { Request, Response } from 'express';
 import pool from '../../lib/db.js';
-import { validateNewEvent, validateUpdateEvent } from '../../validations/eventValidator.js';
+import { validateNewEvent } from '../../validations/eventValidator.js';
 import uploadImage from '../../services/uploadImage.js';
 
 export const getAllEvents = async (req: Request, res: Response) => {
@@ -47,39 +47,68 @@ export const createEvent = async (req: Request, res: Response) => {
         res.status(500).json({ message: 'Failed to create event' });
     }
 };
-
+ 
 export const updateEvent = async (req: Request, res: Response) => {
-    const validationErrors = validateUpdateEvent(req.body);
-    if (validationErrors.length > 0) {
-        return res.status(400).json({ message: 'Invalid input', errors: validationErrors });
-    }
-
+    console.log(`[Backend] Received PATCH for event ${req.params.id}`);
+    console.log("[Backend] Body:", req.body);
+    console.log("[Backend] File:", req.file ? req.file.originalname : "No file uploaded");
+    
     const { id } = req.params;
+    const { title, description, date } = req.body;
+    const file = req.file;
+
+
     const fields = [];
     const values = [];
     let i = 1;
 
-    for (const key in req.body) {
-        if (Object.prototype.hasOwnProperty.call(req.body, key)) {
+    // Use a helper to safely add fields to the query
+    const addField = (key: string, value: any) => {
+        if (value !== undefined && value !== null) {
             fields.push(`${key} = $${i++}`);
-            values.push(req.body[key]);
+            values.push(value);
         }
-    }
-
-    values.push(id);
-    const query = `UPDATE events SET ${fields.join(', ')} WHERE id = $${i} RETURNING *`;
+    };
+    
+    // Explicitly check for the fields you allow to be updated
+    addField('title', title);
+    addField('description', description);
+    addField('date', date);
 
     try {
-        const { rows, rowCount } = await pool.query(query, values);
-        if (rowCount === 0) {
-            return res.status(404).json({ message: 'Event not found' });
+        // Handle the file upload separately
+        if (file) {
+            console.log("[Backend] Uploading new image to ImageKit...");
+            const imageUrl = await uploadImage(file);
+            fields.push(`image_url = $${i++}`);
+            values.push(imageUrl);
+            console.log("[Backend] Image uploaded successfully.");
         }
+
+        // If no fields were provided, there's nothing to do.
+        if (fields.length === 0) {
+            return res.status(400).json({ message: 'No valid fields provided for update.' });
+        }
+
+        values.push(id);
+        const query = `UPDATE events SET ${fields.join(', ')} WHERE id = $${i} RETURNING *`;
+
+        console.log("[Backend] Executing update query...");
+        const { rows, rowCount } = await pool.query(query, values);
+
+        if (rowCount === 0) {
+            return res.status(404).json({ message: 'Event not found.' });
+        }
+
+        console.log("[Backend] Update successful.");
         res.json(rows[0]);
+
     } catch (err) {
         console.error(`Error updating event ${id}:`, err);
-        res.status(500).json({ message: 'Failed to update event' });
+        res.status(500).json({ message: 'Failed to update event due to a server error.' });
     }
 };
+
 
 export const deleteEvent = async (req: Request, res: Response) => {
     const { id } = req.params;
