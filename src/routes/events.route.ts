@@ -11,6 +11,7 @@ import { deregisterInEvent, getEventRegistrations, registerInEvent } from '../co
 import { ADMIN_ROLES } from '../lib/constants.js';
 import multer from 'multer'
 import { authorizeAdmin } from '../middleware/authorizeAdmin.js';
+import { listAllEventsForUser } from '../controllers/events/userEvents.controller.js';
 
 const storage = multer.memoryStorage()
 
@@ -36,6 +37,8 @@ adminEventsRoutes.delete('/:id', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_
 adminEventsRoutes.get('/:eventId/registrations', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), getEventRegistrations);
 
 // -----------------------------------------
+
+eventsRoutes.get('/', listAllEventsForUser);
 
 eventsRoutes.get('/:id', getEventById);
 
