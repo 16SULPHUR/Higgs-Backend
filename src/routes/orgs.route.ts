@@ -1,5 +1,5 @@
 import express from 'express';
-import { createNewOrg, deleteOrg, getAllOrgs, getCurrentOrgPlan, getOrgById, setAdmin, updateOrg } from '../controllers/orgs/orgs.controller.js';
+import { cancelOrganizationPlan, createNewOrg, deleteOrg, getAllOrgs, getCurrentOrgPlan, getOrgById, setAdmin, updateOrg } from '../controllers/orgs/orgs.controller.js';
 import { getOwnOrgProfile, updateOwnOrgProfile } from '../controllers/orgs/orgProfile.controller.js';
 import multer from 'multer';
 
@@ -16,6 +16,8 @@ adminOrgsRoutes.delete('/:id', deleteOrg);
 
 adminOrgsRoutes.post('/:orgId/set-admin', setAdmin);
 adminOrgsRoutes.get('/:orgId/plan', getCurrentOrgPlan);
+
+adminOrgsRoutes.delete('/:orgId/plan', cancelOrganizationPlan);
 
 orgAdminOrgsRoutes.get(
     '/profile',

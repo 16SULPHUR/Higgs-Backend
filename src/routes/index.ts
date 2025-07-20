@@ -17,6 +17,8 @@ import roomsRouter from './roomsRoutes.js';
 import adminBookingRoutes from './adminBooking.route.js';
 import { adminUsersRoutes, usersRoutes } from './users.route.js';
 import { adminOrgsRoutes, orgAdminOrgsRoutes } from './orgs.route.js';
+import supportTicketsRouter from './adminSupportTicketsRoutes.js';
+import userSupportTicketsRouter from './userSupportTicketsRoutes.js';
 
 const router = Router();
 
@@ -27,6 +29,7 @@ router.use('/events', authenticate, eventsRoutes);
 router.use('/profile', authenticate, profileRoutes);
 router.use('/room-types', authenticate, typeOfRoomsRouter)
 router.use('/users', authenticate, usersRoutes)
+router.use('/support-tickets', authenticate, userSupportTicketsRouter)
 
 router.use('/orgs', authenticate, authorize([ROLES.ORG_ADMIN]), orgAdminOrgsRoutes)
 
@@ -56,6 +59,8 @@ router.use('/admin/bookings', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROL
 router.use('/admin/assign-credits', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), creditRoutes);
 
 router.use('/admin/locations', locationsRoutes);
+
+router.use('/admin/support-tickets', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), supportTicketsRouter);
 
 
 export default router;

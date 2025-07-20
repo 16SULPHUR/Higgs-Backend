@@ -49,7 +49,7 @@ export const getOrgById = async (req: Request, res: Response) => {
         if (rowCount === 0) {
             return res.status(404).json({ message: 'Organization not found' });
         }
-        
+
         res.json(rows[0]);
 
     } catch (err) {
@@ -68,7 +68,7 @@ export const createNewOrg = async (req: Request, res: Response) => {
     const { name, plan_id } = req.body;
 
     try {
-        
+
         const { rows } = await pool.query(
             'INSERT INTO organizations (name, plan_id) VALUES ($1, $2) RETURNING *',
             [name, plan_id]
@@ -129,7 +129,7 @@ export const deleteOrg = async (req: Request, res: Response) => {
         res.status(500).json({ message: 'Failed to delete organization' });
     }
 };
- 
+
 export const setAdmin = async (req: Request, res: Response) => {
     const validationErrors = validateSetAdmin(req.body);
     if (validationErrors.length > 0) {
@@ -160,17 +160,17 @@ export const setAdmin = async (req: Request, res: Response) => {
             await client.query('ROLLBACK');
             return res.status(403).json({ message: 'User must be a member of the organization to be made an admin.' });
         }
-        
+
         if (previousAdminId) {
             await client.query(`UPDATE users SET role = 'ORG_USER' WHERE id = $1`, [previousAdminId]);
         }
-        
+
         await client.query(`UPDATE users SET role = 'ORG_ADMIN' WHERE id = $1`, [newAdminId]);
-        
+
         await client.query('UPDATE organizations SET org_admin_id = $1 WHERE id = $2', [newAdminId, orgId]);
 
         await client.query('COMMIT');
-        
+
         res.status(200).json({ message: 'Organization admin updated successfully.' });
 
     } catch (err) {
@@ -197,7 +197,7 @@ export const setAdmin = async (req: Request, res: Response) => {
 //             JOIN organizations o ON p.id = o.plan_id
 //             WHERE o.id = $1;
 //         `;
-        
+
 //         const { rows, rowCount } = await pool.query(query, [id]);
 
 //         if (rowCount === 0) {
@@ -213,7 +213,7 @@ export const setAdmin = async (req: Request, res: Response) => {
 // };
 
 export const getCurrentOrgPlan = async (req: Request, res: Response) => {
-    const orgId = (req as any).user.organization_id; 
+    const orgId = (req as any).user.organization_id;
 
     if (!orgId) {
         return res.status(403).json({ message: 'Forbidden: User is not associated with an organization.' });
@@ -227,7 +227,7 @@ export const getCurrentOrgPlan = async (req: Request, res: Response) => {
             JOIN organizations o ON p.id = o.plan_id
             WHERE o.id = $1;
         `;
-        
+
         const { rows, rowCount } = await pool.query(query, [orgId]);
 
         if (rowCount === 0) {
@@ -239,5 +239,51 @@ export const getCurrentOrgPlan = async (req: Request, res: Response) => {
     } catch (err) {
         console.error(`Error fetching plan for current org admin (orgId: ${orgId}):`, err);
         res.status(500).json({ message: 'Failed to fetch your organization plan' });
+    }
+};
+
+
+
+export const cancelOrganizationPlan = async (req: Request, res: Response) => {
+    const { orgId } = req.params;
+
+    if (!orgId) {
+        return res.status(400).json({ message: 'Organization ID is required.' });
+    }
+
+    const client = await pool.connect();
+
+    try {
+        await client.query('BEGIN');
+
+        const query = `
+            UPDATE organizations
+            SET 
+                plan_id = NULL,
+                credits_pool = 0
+            WHERE id = $1
+            RETURNING id, name, plan_id, credits_pool;
+        `;
+
+        const { rows, rowCount } = await client.query(query, [orgId]);
+
+        if (rowCount === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ message: 'Organization not found.' });
+        }
+
+        await client.query('COMMIT');
+
+        res.status(200).json({
+            message: 'Organization plan has been cancelled successfully.',
+            organization: rows[0]
+        });
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(`Error cancelling plan for organization ${orgId}:`, err);
+        res.status(500).json({ message: 'Failed to cancel organization plan due to a server error.' });
+    } finally {
+        client.release();
     }
 };

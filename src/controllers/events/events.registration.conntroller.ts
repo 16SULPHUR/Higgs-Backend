@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import pool from '../../lib/db.js';
+import { resend } from '../../lib/resend.js';
 
 export const getEventRegistrations = async (req: Request, res: Response) => {
     const { eventId } = req.params;
@@ -54,6 +55,20 @@ export const registerInEvent = async (req: Request, res: Response) => {
             'INSERT INTO event_registrations (event_id, user_id) VALUES ($1, $2) RETURNING *',
             [eventId, userId]
         );
+
+        const eventDetailsQuery = `SELECT e.title, u.name, u.email FROM events e, users u WHERE e.id = $1 AND u.id = $2`;
+        const detailsResult = await pool.query(eventDetailsQuery, [eventId, userId]);
+        const details = detailsResult.rows[0];
+
+        console.log("details")
+        console.log(detailsResult.rows)
+
+        await resend.emails.send({
+            from: `Higgs Workspace <${process.env.INVITE_EMAIL_FROM}>`,
+            to: details.email,
+            subject: `You're registered for ${details.title}!`,
+            html: `<p>Hi ${details.name},</p><p>You have successfully registered for our upcoming event: <strong>${details.title}</strong>. We look forward to seeing you there!</p>`,
+        });
 
 
         res.json(rows);

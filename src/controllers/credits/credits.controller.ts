@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import pool from '../../lib/db.js';
+import { resend } from '../../lib/resend.js';
 
 export const assignCredits = async (req: Request, res: Response) => {
     const { id } = req.params;
@@ -32,9 +33,26 @@ export const assignCredits = async (req: Request, res: Response) => {
                 'UPDATE organizations SET credits_pool = $1 WHERE id = $2 RETURNING id, credits_pool',
                 [currentCredits + creditsToAssign, id]
             );
+
+            const orgAdminQuery = `SELECT u.email, u.name FROM users u JOIN organizations o ON u.id = o.org_admin_id WHERE o.id = $1`;
+
+            const orgAdminResult = await client.query(orgAdminQuery, [id]);
+
+            if (orgAdminResult.rowCount > 0) {
+                const orgAdmin = orgAdminResult.rows[0];
+                await resend.emails.send({
+                    from: `Higgs Workspace <${process.env.INVITE_EMAIL_FROM}>`,
+                    to: orgAdmin.email,
+                    subject: 'Credits have been added to your organization',
+                    html: `<p>Hi ${orgAdmin.name},</p><p>An administrator has added <strong>${creditsToAssign} credits</strong> to your organization's pool. Your new balance is ${rows[0].credits_pool}.</p>`,
+                });
+            }
+
             await client.query('COMMIT');
             return res.json({ type: 'organization', ...rows[0] });
         }
+
+
 
         await client.query('ROLLBACK');
         return res.status(404).json({ message: 'User or Organization not found' });

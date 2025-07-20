@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import pool from '../../lib/db.js';
+import pool from '../../lib/db.js'; 
 
 export const listAllEventsForUser = async (req: Request, res: Response) => {
     const user = (req as any).user;
@@ -26,6 +26,10 @@ export const listAllEventsForUser = async (req: Request, res: Response) => {
                 e.date ASC;
         `;
         const { rows } = await pool.query(query, [user.id]);
+
+
+
+
         res.json(rows);
     } catch (err) {
         console.error('Error fetching events for user:', err);

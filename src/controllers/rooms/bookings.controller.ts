@@ -177,6 +177,20 @@ export const createBooking = async (req: Request, res: Response) => {
         ]);
 
         await client.query('COMMIT');
+
+        const bookingDetailsQuery = `SELECT u.name, u.email, tor.name as type_name, r.name as instance_name, b.start_time FROM bookings b JOIN users u ON b.user_id = u.id JOIN rooms r ON b.room_id = r.id JOIN type_of_rooms tor ON r.type_of_room_id = tor.id WHERE b.id = $1`;
+    const detailsResult = await pool.query(bookingDetailsQuery, [rows[0].id]);
+    const details = detailsResult.rows[0];
+    
+    await resend.emails.send({
+                   from: `Higgs Workspace <${process.env.INVITE_EMAIL_FROM}>`,
+
+        to: details.email,
+        subject: `Booking Confirmed: ${details.type_name}`,
+        html: `<p>Hi ${details.name},</p><p>Your booking for <strong>${details.type_name} (${details.instance_name})</strong> on ${new Date(details.start_time).toDateString()} is confirmed.</p>`,
+    });
+
+
         res.status(201).json(rows[0]);
 
     } catch (err) {
@@ -266,6 +280,17 @@ export const cancelBooking = async (req: Request, res: Response) => {
         );
 
         await client.query('COMMIT');
+
+        const bookingDetailsQuery = `SELECT u.name, u.email, tor.name as type_name FROM bookings b JOIN users u ON b.user_id = u.id JOIN rooms r ON b.room_id = r.id JOIN type_of_rooms tor ON r.type_of_room_id = tor.id WHERE b.id = $1`;
+    const detailsResult = await pool.query(bookingDetailsQuery, [bookingId]);
+    const details = detailsResult.rows[0];
+
+    await resend.emails.send({
+        from: 'Higgs Workspace <confirmations@yourdomain.com>',
+        to: details.email,
+        subject: `Booking Cancelled: ${details.type_name}`,
+        html: `<p>Hi ${details.name},</p><p>Your booking for <strong>${details.type_name}</strong> has been successfully cancelled.</p>`,
+    });
 
         res.status(200).json({ message: 'Booking cancelled successfully.', booking: rows[0] });
 

@@ -128,24 +128,26 @@ export const getAllUsers = async (req: Request, res: Response) => {
 };
 
 export const addUserToOrg = async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const { organization_id } = req.body;
-
-    console.log("ADDing user to org")
-    console.log(organization_id)
-
+    const { userId, orgId } = req.params;
+    
     try {
-        const { rows } = await pool.query(
-            'UPDATE users SET organization_id = $1 WHERE id = $2 RETURNING *',
-            [organization_id, id]
-        );
-        if (rows.length === 0) {
-            return res.status(404).json({ message: 'User not found.' });
-        }
-        res.json(rows[0]);
+        const userUpdate = await pool.query('UPDATE users SET organization_id = $1 WHERE id = $2 RETURNING email, name', [orgId, userId]);
+        if (userUpdate.rowCount === 0) return res.status(404).json({ message: 'User not found.' });
+
+        const orgDetails = await pool.query('SELECT name FROM organizations WHERE id = $1', [orgId]);
+        const user = userUpdate.rows[0];
+        const orgName = orgDetails.rows[0].name;
+
+        await resend.emails.send({
+            from: `Higgs Workspace <${process.env.INVITE_EMAIL_FROM}>`,
+            to: user.email,
+            subject: `You've been added to ${orgName} on Higgs Workspace`,
+            html: `<p>Hi ${user.name},</p><p>An administrator has added you to the <strong>${orgName}</strong> organization.</p>`,
+        });
+
+        res.status(200).json({ message: 'User successfully added to organization.' });
     } catch (err) {
-        console.error(`Error updating user ${id}:`, err);
-        res.status(500).json({ message: 'Failed to update user.' });
+        res.status(500).json({ message: 'Failed to add user to organization.' });
     }
 };
 
