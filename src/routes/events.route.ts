@@ -8,7 +8,7 @@ import {
 } from '../controllers/events/events.controller.js';
 import { deregisterInEvent, getEventRegistrations, registerInEvent } from '../controllers/events/events.registration.conntroller.js';
 // import { authorize } from '../middleware/auth.js';
-import { ADMIN_ROLES } from '../lib/constants.js';
+// import { ADMIN_ROLES } from '../lib/constants.js';
 import multer from 'multer'
 import { authorizeAdmin } from '../middleware/authorizeAdmin.js';
 import { listAllEventsForUser } from '../controllers/events/userEvents.controller.js';
@@ -24,17 +24,17 @@ const upload = multer({
 const adminEventsRoutes = express.Router();
 const eventsRoutes = express.Router();
 
-adminEventsRoutes.get('/', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), getAllEventsWithDetails);
+adminEventsRoutes.get('/', (req, res, next) => authorizeAdmin(req, res, next), getAllEventsWithDetails);
 
-adminEventsRoutes.get('/:id', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), getEventById);
+adminEventsRoutes.get('/:id', (req, res, next) => authorizeAdmin(req, res, next), getEventById);
 
-adminEventsRoutes.post('/', upload.single("eventImage"), authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), createEvent);
+adminEventsRoutes.post('/', upload.single("eventImage"), (req, res, next) => authorizeAdmin(req, res, next), createEvent);
 
-adminEventsRoutes.patch('/:id', upload.single("eventImage"), authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), updateEvent);
+adminEventsRoutes.patch('/:id', upload.single("eventImage"), (req, res, next) => authorizeAdmin(req, res, next), updateEvent);
 
-adminEventsRoutes.delete('/:id', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), deleteEvent);
+adminEventsRoutes.delete('/:id', (req, res, next) => authorizeAdmin(req, res, next), deleteEvent);
 
-adminEventsRoutes.get('/:eventId/registrations', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), getEventRegistrations);
+adminEventsRoutes.get('/:eventId/registrations', (req, res, next) => authorizeAdmin(req, res, next), getEventRegistrations);
 
 // -----------------------------------------
 

@@ -4,7 +4,7 @@ import authRoutes from '../routes/auth.route.js';
 import availabilityRoutes from './availability.route.js';
 import bookingsRoutes from './booking.route.js';
 import { authenticate, authorize } from '../middleware/auth.js';
-import { ADMIN_ROLES, ROLES } from '../lib/constants.js';
+import { ROLES } from '../lib/constants.js';
 import profileRoutes from './profile.route.js';
 import creditRoutes from './credits.route.js';
 import { adminEventsRoutes, eventsRoutes } from './events.route.js';
@@ -36,31 +36,31 @@ router.use('/orgs', authenticate, authorize([ROLES.ORG_ADMIN]), orgAdminOrgsRout
 
 
 router.use('/admin/auth', adminAuthRoutes)
-router.use('/admin/users', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), adminUsersRoutes);
+router.use('/admin/users', (req, res, next) => authorizeAdmin(req, res, next), adminUsersRoutes);
 
-router.use('/admin/plans', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), plansRoutes);
+router.use('/admin/plans', (req, res, next) => authorizeAdmin(req, res, next), plansRoutes);
 
-router.use('/admin/orgs', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), adminOrgsRoutes);
+router.use('/admin/orgs', (req, res, next) => authorizeAdmin(req, res, next), adminOrgsRoutes);
 
-router.use('/admin/events', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), adminEventsRoutes);
+router.use('/admin/events', (req, res, next) => authorizeAdmin(req, res, next), adminEventsRoutes);
 
 router.use('/meeting-rooms', meetingRoomsRoutes);
 
-router.use('/admin/room-types', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), typeOfRoomsRouter)
+router.use('/admin/room-types', (req, res, next) => authorizeAdmin(req, res, next), typeOfRoomsRouter)
 
-router.use('/admin/rooms', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), roomsRouter)
+router.use('/admin/rooms', (req, res, next) => authorizeAdmin(req, res, next), roomsRouter)
 
-router.use('/admin/room', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), typeOfRoomsRouter)
+router.use('/admin/room', (req, res, next) => authorizeAdmin(req, res, next), typeOfRoomsRouter)
 
-router.use('/admin/meeting-rooms', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), adminMeetingRoomsRoutes);
+router.use('/admin/meeting-rooms', (req, res, next) => authorizeAdmin(req, res, next), adminMeetingRoomsRoutes);
 
-router.use('/admin/bookings', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), adminBookingRoutes);
+router.use('/admin/bookings', (req, res, next) => authorizeAdmin(req, res, next), adminBookingRoutes);
 
-router.use('/admin/assign-credits', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), creditRoutes);
+router.use('/admin/assign-credits', (req, res, next) => authorizeAdmin(req, res, next), creditRoutes);
 
 router.use('/admin/locations', locationsRoutes);
 
-router.use('/admin/support-tickets', authorizeAdmin([ADMIN_ROLES.SUPER_ADMIN, ADMIN_ROLES.LOCATION_ADMIN]), supportTicketsRouter);
+router.use('/admin/support-tickets', (req, res, next) => authorizeAdmin(req, res, next), supportTicketsRouter);
 
 
 export default router;

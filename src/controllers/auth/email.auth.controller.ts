@@ -1,9 +1,11 @@
 import bcrypt from 'bcryptjs';
 import pool from '../../lib/db.js';
 import { resend } from '../../lib/resend.js';
-import jwt from 'jsonwebtoken';
-import { v4 as uuidv4 } from 'uuid';
+// import jwt from 'jsonwebtoken';
+// import { v4 as uuidv4 } from 'uuid';
 import { Request, Response } from 'express';
+// import { randomUUID } from 'crypto';
+import { generateTokens } from '../../services/token.service.js';
 
 export const register = async (req: Request, res: Response) => {
 
@@ -50,68 +52,101 @@ export const register = async (req: Request, res: Response) => {
     }
 };
 
+// export const login = async (req: Request, res: Response) => {
+//     const { email, password } = req.body;
+//     console.log(req.body)
+//     const dbClient = await pool.connect();
+
+//     try {
+//         await dbClient.query('BEGIN');
+
+//         const { rows } = await dbClient.query('SELECT * FROM users WHERE email = $1', [email]);
+//         const user = rows[0];
+//         if (!user) return res.status(404).json({ message: 'User not found' });
+//         if (!user.is_verified) return res.status(403).json({ message: 'Email not verified.' });
+//         if (!user.password) return res.status(401).json({ message: 'Please log in with your Google account.' });
+
+//         const match = await bcrypt.compare(password, user.password);
+//         if (!match) return res.status(401).json({ message: 'Invalid credentials' });
+
+
+//         const jti = uuidv4();
+//         const tokenExpiresIn = '1d';
+//         const expirationDate = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+//         const tokenPayload = {
+//             id: user.id,
+//             name: user.name,
+//             role: user.role,
+//             organization_id: user.organization_id,
+//             type: 'user',
+//             jti: jti
+//         };
+
+//         // const payload = {
+//         //     adminId: admin.id,
+//         //     role: admin.role,
+//         //     locationId: admin.location_id,
+//         //     type: 'admin',
+//         //     jti: jti
+//         // };
+//         // const token = jwt.sign(payload, process.env.JWT_SECRET!, { expiresIn: tokenExpiresIn });
+
+//         const token = jwt.sign(tokenPayload, process.env.JWT_SECRET!, { expiresIn: tokenExpiresIn });
+
+
+//         await dbClient.query(
+//             `INSERT INTO active_sessions (jti, subject_id, subject_type, expires_at)
+//              VALUES ($1, $2, 'USER', $3)`,
+//             [jti, user.id, expirationDate]
+//         );
+
+//         const userResponse = {
+//             id: user.id, name: user.name, email: user.email, phone: user.phone,
+//             role: user.role, profile_picture: user.profile_picture, organization_id: user.organization_id
+//         };
+
+//         await dbClient.query('COMMIT');
+//         res.json({ token, user: userResponse });
+//     } catch (err) {
+//         await dbClient.query('ROLLBACK');
+//         console.error('Login error:', err);
+//         res.status(500).json({ message: 'Server error' });
+//     } finally {
+//         dbClient.release();
+//     }
+// };
+
 export const login = async (req: Request, res: Response) => {
     const { email, password } = req.body;
-    console.log(req.body)
-    const dbClient = await pool.connect();
-
     try {
-        await dbClient.query('BEGIN');
-
-        const { rows } = await dbClient.query('SELECT * FROM users WHERE email = $1', [email]);
+        const { rows } = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
         const user = rows[0];
-        if (!user) return res.status(404).json({ message: 'User not found' });
-        if (!user.is_verified) return res.status(403).json({ message: 'Email not verified.' });
-        if (!user.password) return res.status(401).json({ message: 'Please log in with your Google account.' });
 
-        const match = await bcrypt.compare(password, user.password);
-        if (!match) return res.status(401).json({ message: 'Invalid credentials' });
+        if (!user || !(await bcrypt.compare(password, user.password))) {
+            return res.status(401).json({ message: 'Invalid credentials or user not found.' });
+        }
+        if (!user.is_verified) {
+            return res.status(403).json({ message: 'Email not verified.' });
+        }
+        
+        const { accessToken, refreshToken } = await generateTokens(user.id, 'USER');
 
-
-        const jti = uuidv4();
-        const tokenExpiresIn = '1d';
-        const expirationDate = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-        const tokenPayload = {
-            id: user.id,
-            name: user.name,
-            role: user.role,
-            organization_id: user.organization_id,
-            type: 'user',
-            jti: jti
+        const userResponse = { 
+            id: user.id, 
+            name: user.name, 
+            role: user.role, 
+            organization_id: user.organization_id 
         };
 
-        // const payload = {
-        //     adminId: admin.id,
-        //     role: admin.role,
-        //     locationId: admin.location_id,
-        //     type: 'admin',
-        //     jti: jti
-        // };
-        // const token = jwt.sign(payload, process.env.JWT_SECRET!, { expiresIn: tokenExpiresIn });
-
-        const token = jwt.sign(tokenPayload, process.env.JWT_SECRET!, { expiresIn: tokenExpiresIn });
-
-
-        await dbClient.query(
-            `INSERT INTO active_sessions (jti, subject_id, subject_type, expires_at)
-             VALUES ($1, $2, 'USER', $3)`,
-            [jti, user.id, expirationDate]
-        );
-
-        const userResponse = {
-            id: user.id, name: user.name, email: user.email, phone: user.phone,
-            role: user.role, profile_picture: user.profile_picture, organization_id: user.organization_id
-        };
-
-        await dbClient.query('COMMIT');
-        res.json({ token, user: userResponse });
+        res.status(200).json({
+            accessToken,
+            refreshToken,
+            user: userResponse
+        });
     } catch (err) {
-        await dbClient.query('ROLLBACK');
-        console.error('Login error:', err);
-        res.status(500).json({ message: 'Server error' });
-    } finally {
-        dbClient.release();
+        console.error("Login error:", err);
+        res.status(500).json({ message: 'Server error during login.' });
     }
 };
 

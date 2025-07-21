@@ -6,12 +6,10 @@ import { getAllLocations, getLocationById } from '../controllers/locations/locat
 const locationsRoutes = express.Router();
 
 
-const allowedRoles = ['SUPER_ADMIN', 'LOCATION_ADMIN', 'SUPPORT_ADMIN'];
+
+locationsRoutes.get('/', (req, res, next) => authorizeAdmin(req, res, next), getAllLocations);
 
 
-locationsRoutes.get('/', authorizeAdmin(allowedRoles), getAllLocations);
-
-
-locationsRoutes.get('/:id', authorizeAdmin(allowedRoles), getLocationById);
+locationsRoutes.get('/:id', (req, res, next) => authorizeAdmin(req, res, next), getLocationById);
 
 export default locationsRoutes;

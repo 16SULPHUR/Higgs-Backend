@@ -14,7 +14,7 @@ interface UserPayload {
 declare global {
     namespace Express {
         interface Request {
-            user?: UserPayload;
+            user?: any;
         }
     }
 }
@@ -26,36 +26,43 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     }
 
     const token = authHeader.split(' ')[1];
-    
+
+    console.log("token===================================")
+    console.log(token)
+
+    if (!token) {
+        return res.status(401).json({ message: 'Authentication required: Access token missing.' });
+    }
+
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET!) as UserPayload;
 
-        if (decoded.type !== 'user' || !decoded.jti) {
-            return res.status(403).json({ message: 'Forbidden: Invalid token type.' });
+        if (decoded.type !== 'user') {
+            return res.status(403).json({ message: 'Forbidden: Invalid token type for this route.' });
         }
 
-        const sessionResult = await pool.query(
-            'SELECT id FROM active_sessions WHERE jti = $1 AND subject_id = $2 AND subject_type = \'USER\' AND expires_at > NOW()',
-            [decoded.jti, decoded.id]
-        );
+        const userStatusResult = await pool.query('SELECT role, organization_id, is_active FROM users WHERE id = $1', [decoded.id]);
 
-        if (sessionResult.rowCount === 0) {
-            return res.status(401).json({ message: 'Authentication failed: Session is invalid or has been revoked.' });
+        if (userStatusResult.rowCount === 0) {
+            return res.status(401).json({ message: 'Authentication failed: User not found.' });
         }
-        
-        // --- NEW CHECK ---
-        // After verifying the session, check the user's active status in the database.
-        const userStatusResult = await pool.query('SELECT is_active FROM users WHERE id = $1', [decoded.id]);
-        if (userStatusResult.rowCount === 0 || !userStatusResult.rows[0].is_active) {
+
+        const userDbInfo = userStatusResult.rows[0];
+
+        if (!userDbInfo.is_active) {
             return res.status(403).json({ message: 'Forbidden: Your account is inactive.' });
         }
-        // -----------------
-        
-        req.user = decoded;
+
+        req.user = {
+            id: decoded.id,
+            role: userDbInfo.role,
+            organization_id: userDbInfo.organization_id
+        };
+
         next();
 
     } catch (err) {
-        return res.status(401).json({ message: 'Authentication failed: Invalid token.' });
+        return res.status(401).json({ message: 'Authentication failed: Invalid or expired access token.' });
     }
 };
 
@@ -65,5 +72,5 @@ export const authorize = (roles: string[]) => {
             return res.status(403).json({ message: 'Forbidden: You do not have the required permissions.' });
         }
         next();
-  };
+    };
 };
