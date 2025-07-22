@@ -129,15 +129,22 @@ export const login = async (req: Request, res: Response) => {
         if (!user.is_verified) {
             return res.status(403).json({ message: 'Email not verified.' });
         }
-        
+
         const { accessToken, refreshToken } = await generateTokens(user.id, 'USER');
 
-        const userResponse = { 
-            id: user.id, 
-            name: user.name, 
-            role: user.role, 
-            organization_id: user.organization_id 
+        const userResponse = {
+            id: user.id,
+            name: user.name,
+            role: user.role,
+            organization_id: user.organization_id
         };
+
+        console.log({
+            accessToken,
+            refreshToken,
+            user: userResponse
+        })
+        console.log("accessToken, refreshToken, userResponse");
 
         res.status(200).json({
             accessToken,

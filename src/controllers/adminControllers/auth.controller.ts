@@ -35,6 +35,13 @@ export const loginAdmin = async (req: Request, res: Response) => {
             role: admin.role,
             locationId: admin.location_id
         };
+
+        console.log({
+            accessToken,
+            refreshToken,
+            admin: adminResponse
+        });
+        console.log("accessToken, refreshToken, adminResponse");
  
         res.status(200).json({
             accessToken,
