@@ -54,13 +54,10 @@ export const refreshTokenController = async (req: Request, res: Response) => {
             return res.status(403).json({ message: 'Invalid refresh token. Please log in again.' });
         }
 
-        // --- LOGIC CHANGE ---
-        // We no longer revoke any tokens. We just generate a new access token.
         const newAccessToken = generateAccessToken(foundToken.subject_id, foundToken.subject_type as any);
 
 
         console.log("refresh tokenController: New access token generated for subject ID:", foundToken.subject_id);
-        // Return only the new access token. The refresh token remains the same.
         res.status(200).json({
             accessToken: newAccessToken,
         });
