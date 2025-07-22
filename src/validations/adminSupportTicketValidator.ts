@@ -21,10 +21,15 @@ export const validateNewTicketByAdmin = (data: TicketData): string[] => {
     return errors;
 };
 
-export const validateUpdateTicketByAdmin = (data: TicketData): string[] => {
-    const errors: string[] = [];
-    const { status } = data;
+interface AdminUpdateTicketData {
+    status?: 'OPEN' | 'IN_PROGRESS' | 'CLOSED';
+    response?: string;
+}
 
+export const validateUpdateTicketByAdmin = (data: AdminUpdateTicketData): string[] => {
+    const errors: string[] = [];
+    const { status, response } = data;
+ 
     if (!status) {
         errors.push('Status field is required for an update.');
         return errors;
@@ -32,5 +37,10 @@ export const validateUpdateTicketByAdmin = (data: TicketData): string[] => {
     if (!['OPEN', 'IN_PROGRESS', 'CLOSED'].includes(status)) {
         errors.push("Status must be one of 'OPEN', 'IN_PROGRESS', or 'CLOSED'.");
     }
+ 
+    if (response && (typeof response !== 'string' || response.trim().length < 5)) {
+        errors.push('If provided, the response must be at least 5 characters long.');
+    }
+    
     return errors;
 };

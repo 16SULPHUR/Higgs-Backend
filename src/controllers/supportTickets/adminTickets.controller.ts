@@ -93,27 +93,43 @@ export const updateTicketStatus = async (req: Request, res: Response) => {
     }
 
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, response } = req.body; // The response text is now optional
 
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
 
-        const { rows, rowCount } = await client.query(
-            "UPDATE support_tickets SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *",
-            [status, id]
-        );
+        // --- THIS IS THE FIX ---
+        // Dynamically build the query. Status is always updated.
+        // Response is only updated if it's provided in the request.
+        let query = 'UPDATE support_tickets SET status = $1, updated_at = NOW()';
+        const values: (string | number)[] = [status];
+
+        if (response) {
+            query += `, response = $${values.length + 1}`;
+            values.push(response);
+        }
+
+        query += ` WHERE id = $${values.length + 1} RETURNING *`;
+        values.push(id);
+
+        const { rows, rowCount } = await client.query(query, values);
         if (rowCount === 0) {
             await client.query('ROLLBACK');
             return res.status(404).json({ message: 'Ticket not found.' });
         }
         const updatedTicket = rows[0];
 
-        const userResult = await client.query(
-            'SELECT name, email FROM users WHERE id = $1',
-            [updatedTicket.user_id]
-        );
+        const userResult = await client.query('SELECT name, email FROM users WHERE id = $1', [updatedTicket.user_id]);
         const user = userResult.rows[0];
+
+
+        if (!user) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ message: 'User not found for this ticket.' });
+        }
+
+
 
         await resend.emails.send({
             from: `Higgs Workspace Support <${process.env.INVITE_EMAIL_FROM}>`,
@@ -124,8 +140,15 @@ export const updateTicketStatus = async (req: Request, res: Response) => {
                     <h2>Hi ${user.name},</h2>
                     <p>There has been an update on your support ticket regarding: <strong>${updatedTicket.subject}</strong>.</p>
                     <p>The status has been changed to: <strong>${status.toUpperCase()}</strong>.</p>
-                    ${status === 'CLOSED' ? '<p>This ticket is now considered resolved. If you have further questions, please open a new ticket.</p>' : ''}
-                    <p>You can view the details in your portal.</p>
+                    
+                    ${updatedTicket.response ? `
+                        <div style="border-left: 4px solid #1976D2; padding-left: 15px; margin-top: 20px; background-color: #f9f9f9;">
+                            <p><strong>Our team has provided the following response:</strong></p>
+                            <p><em>${updatedTicket.response}</em></p>
+                        </div>
+                    ` : ''}
+
+                    <p style="margin-top: 20px;">You can view the full details in your portal.</p>
                 </div>
             `
         });
@@ -134,11 +157,14 @@ export const updateTicketStatus = async (req: Request, res: Response) => {
         res.json(updatedTicket);
     } catch (err) {
         await client.query('ROLLBACK');
+        console.error(`Error updating ticket ${id}:`, err);
         res.status(500).json({ message: 'Failed to update ticket.' });
     } finally {
         client.release();
     }
 };
+
+
 
 
 export const deleteTicket = async (req: Request, res: Response) => {

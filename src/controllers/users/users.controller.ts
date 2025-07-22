@@ -175,8 +175,7 @@ export const getAllUsersForMemberBook = async (req: Request, res: Response) => {
         const query = `
             SELECT 
                 u.id, 
-                u.name, 
-                u.email, 
+                u.name,
                 u.profile_picture,
                 o.name as organization_name
             FROM users u

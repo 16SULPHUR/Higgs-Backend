@@ -1,10 +1,11 @@
 import { Request, Response } from 'express';
 import pool from '../../lib/db.js';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { v4 as uuidv4 } from 'uuid';
+// import jwt from 'jsonwebtoken';
+// import { v4 as uuidv4 } from 'uuid';
 import { validateNewAdmin } from '../../validations/adminValidator.js';
 import { ADMIN_ROLES } from '../../lib/constants.js';
+import { generateTokens } from '../../services/token.service.js';
 
 export const loginAdmin = async (req: Request, res: Response) => {
     const { email, password } = req.body;
@@ -13,12 +14,8 @@ export const loginAdmin = async (req: Request, res: Response) => {
         return res.status(400).json({ message: 'Email and password are required.' });
     }
 
-    const client = await pool.connect(); 
-
     try {
-        await client.query('BEGIN');
-
-        const result = await client.query('SELECT * FROM admins WHERE email = $1', [email]);
+        const result = await pool.query('SELECT * FROM admins WHERE email = $1', [email]);
         const admin = result.rows[0];
 
         if (!admin || !admin.is_active) {
@@ -29,37 +26,28 @@ export const loginAdmin = async (req: Request, res: Response) => {
         if (!isMatch) {
             return res.status(401).json({ message: 'Invalid credentials.' });
         }
-
-        const jti = uuidv4(); 
-        const tokenExpiresIn = '8h';
-        const expirationDate = new Date(Date.now() + 8 * 60 * 60 * 1000);
-
-        const payload = {
-            adminId: admin.id,
+ 
+        const { accessToken, refreshToken } = await generateTokens(admin.id, 'ADMIN');
+ 
+        const adminResponse = { 
+            id: admin.id, 
+            name: admin.name, 
             role: admin.role,
-            locationId: admin.location_id,
-            type: 'admin',
-            jti: jti 
+            locationId: admin.location_id
         };
-        const token = jwt.sign(payload, process.env.JWT_SECRET!, { expiresIn: tokenExpiresIn });
-
-        await client.query(
-            `INSERT INTO active_sessions (jti, subject_id, subject_type, expires_at)
-             VALUES ($1, $2, 'ADMIN', $3)`,
-            [jti, admin.id, expirationDate]
-        );
-
-        await client.query('COMMIT'); 
-        res.json({ token, admin: { name: admin.name, role: admin.role } });
+ 
+        res.status(200).json({
+            accessToken,
+            refreshToken,
+            admin: adminResponse
+        });
 
     } catch (err) {
-        await client.query('ROLLBACK');
         console.error('Admin login error:', err);
         res.status(500).json({ message: 'Server error during admin login.' });
-    } finally {
-        client.release();
     }
 };
+
 
 
 export const logoutAdmin = async (req: Request, res: Response) => {
