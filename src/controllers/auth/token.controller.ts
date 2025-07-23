@@ -8,6 +8,8 @@ export const refreshTokenController = async (req: Request, res: Response) => {
     console.log('refreshTokenController');
     const { refreshToken: incomingRefreshToken, expiredAccessToken } = req.body;
 
+    console.log(req.body)
+
     if (!incomingRefreshToken || !expiredAccessToken) {
         return res.status(401).json({ message: 'Tokens are required.' });
     }
