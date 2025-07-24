@@ -7,6 +7,8 @@ import { generateAccessToken } from '../../services/token.service.js';
 export const refreshTokenController = async (req: Request, res: Response) => {
     const { refreshToken: incomingRefreshToken, expiredAccessToken } = req.body;
 
+    console.log("refreshTokenController called with body:", req.body);
+
     if (!incomingRefreshToken || !expiredAccessToken) {
         return res.status(401).json({ message: 'Tokens are required.' });
     }
@@ -18,6 +20,8 @@ export const refreshTokenController = async (req: Request, res: Response) => {
         return res.status(401).json({ message: 'Invalid access token format.' });
     }
 
+    console.log("decodedExpiredToken")
+    console.log(decodedExpiredToken)
     const subjectId = decodedExpiredToken.id;
     if (!subjectId) {
         return res.status(401).json({ message: 'Invalid token payload.' });
@@ -49,9 +53,9 @@ export const refreshTokenController = async (req: Request, res: Response) => {
         // --- THIS IS THE ONLY ADDED LOGIC BLOCK ---
         let userStatusQuery;
         if (foundToken.subject_type === 'USER') {
-            userStatusQuery = client.query('SELECT is_active, role, organization_id FROM users WHERE id = $1', [foundToken.subject_id]);
+            userStatusQuery = client.query('SELECT id, is_active, role, organization_id FROM users WHERE id = $1', [foundToken.subject_id]);
         } else if (foundToken.subject_type === 'ADMIN') {
-            userStatusQuery = client.query('SELECT is_active, role, location_id FROM admins WHERE id = $1', [foundToken.subject_id]);
+            userStatusQuery = client.query('SELECT id, is_active, role, location_id FROM admins WHERE id = $1', [foundToken.subject_id]);
         } else {
             return res.status(403).json({ message: 'Invalid subject type in token.' });
         }

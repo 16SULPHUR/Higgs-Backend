@@ -27,13 +27,16 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
 
     console.log("token===================================")
     console.log(token)
-    
+
     if (!token) {
         return res.status(401).json({ message: 'Access token required.' });
     }
     
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as UserPayload;
+        const decoded:any = jwt.verify(token, process.env.JWT_SECRET!) as UserPayload;
+
+        console.log(decoded)
+        console.log(new Date(decoded?.exp * 1000).toLocaleTimeString())
 
         if (decoded.type !== 'user') {
             return res.status(403).json({ message: 'Forbidden: Invalid token type.' });
