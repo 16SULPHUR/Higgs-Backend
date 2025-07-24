@@ -6,7 +6,6 @@ import bcrypt from 'bcryptjs';
 import { validateNewAdmin } from '../../validations/adminValidator.js';
 import { ADMIN_ROLES } from '../../lib/constants.js';
 import { generateTokens } from '../../services/token.service.js';
-
 export const loginAdmin = async (req: Request, res: Response) => {
     const { email, password } = req.body;
 
@@ -26,23 +25,16 @@ export const loginAdmin = async (req: Request, res: Response) => {
         if (!isMatch) {
             return res.status(401).json({ message: 'Invalid credentials.' });
         }
- 
-        const { accessToken, refreshToken } = await generateTokens(admin.id, 'ADMIN');
- 
-        const adminResponse = { 
-            id: admin.id, 
-            name: admin.name, 
+
+        const { accessToken, refreshToken } = await generateTokens(admin, 'ADMIN');
+
+        const adminResponse = {
+            id: admin.id,
+            name: admin.name,
             role: admin.role,
             locationId: admin.location_id
         };
 
-        console.log({
-            accessToken,
-            refreshToken,
-            admin: adminResponse
-        });
-        console.log("accessToken, refreshToken, adminResponse");
- 
         res.status(200).json({
             accessToken,
             refreshToken,
@@ -63,11 +55,11 @@ export const logoutAdmin = async (req: Request, res: Response) => {
         if (!jti) {
             return res.status(400).json({ message: 'Invalid token.' });
         }
-        
+
         await pool.query('DELETE FROM active_sessions WHERE jti = $1', [jti]);
-        
+
         res.status(200).json({ message: 'Logged out successfully.' });
-        
+
     } catch (err) {
         console.error('Admin logout error:', err);
         res.status(500).json({ message: 'Server error during logout.' });
@@ -76,7 +68,7 @@ export const logoutAdmin = async (req: Request, res: Response) => {
 
 
 export const registerAdmin = async (req: Request, res: Response) => {
-    
+
     const validationErrors = validateNewAdmin(req.body);
     if (validationErrors.length > 0) {
         return res.status(400).json({ message: 'Invalid input', errors: validationErrors });
@@ -88,13 +80,13 @@ export const registerAdmin = async (req: Request, res: Response) => {
     try {
         await client.query('BEGIN');
 
-        
+
         const existingAdmin = await client.query('SELECT id FROM admins WHERE email = $1', [email]);
         if (existingAdmin.rowCount > 0) {
             return res.status(409).json({ message: 'An admin with this email already exists.' });
         }
-        
-        
+
+
         if (role === ADMIN_ROLES.LOCATION_ADMIN && location_id) {
             const locationCheck = await client.query('SELECT id FROM locations WHERE id = $1', [location_id]);
             if (locationCheck.rowCount === 0) {
@@ -102,10 +94,10 @@ export const registerAdmin = async (req: Request, res: Response) => {
             }
         }
 
-        
+
         const hashedPassword = await bcrypt.hash(password, parseInt(process.env.SALT!));
 
-        
+
         const { rows } = await client.query(
             `INSERT INTO admins (name, email, password, role, location_id)
              VALUES ($1, $2, $3, $4, $5)
