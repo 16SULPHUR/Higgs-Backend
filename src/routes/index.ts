@@ -25,7 +25,7 @@ const router = Router();
 router.use('/auth', authRoutes);
 router.use('/availability', authenticate, availabilityRoutes);
 router.use('/bookings', authenticate, bookingsRoutes);
-router.use('/events', authenticate, eventsRoutes);
+router.use('/events', eventsRoutes);
 router.use('/profile', authenticate, profileRoutes);
 router.use('/room-types', authenticate, typeOfRoomsRouter)
 router.use('/users', authenticate, usersRoutes)

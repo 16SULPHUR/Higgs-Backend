@@ -26,6 +26,8 @@ export const updateUserProfile = async (req: Request, res: Response) => {
     const { name, phone } = req.body;
     const file = req.file;
 
+    console.log(name, phone, file);
+
     const client = await pool.connect();
 
     try {
