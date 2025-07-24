@@ -130,7 +130,7 @@ export const login = async (req: Request, res: Response) => {
             return res.status(403).json({ message: 'Email not verified.' });
         }
 
-        const { accessToken, refreshToken } = await generateTokens(user.id, 'USER');
+        const { accessToken, refreshToken } = await generateTokens(user, 'USER');
 
         const userResponse = {
             id: user.id,
@@ -139,23 +139,13 @@ export const login = async (req: Request, res: Response) => {
             organization_id: user.organization_id
         };
 
-        console.log({
-            accessToken,
-            refreshToken,
-            user: userResponse
-        })
-        console.log("accessToken, refreshToken, userResponse");
-
-        res.status(200).json({
-            accessToken,
-            refreshToken,
-            user: userResponse
-        });
+        res.status(200).json({ accessToken, refreshToken, user: userResponse });
     } catch (err) {
         console.error("Login error:", err);
         res.status(500).json({ message: 'Server error during login.' });
     }
 };
+
 
 
 
