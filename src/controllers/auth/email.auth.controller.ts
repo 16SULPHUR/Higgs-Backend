@@ -5,7 +5,7 @@ import { resend } from '../../lib/resend.js';
 // import { v4 as uuidv4 } from 'uuid';
 import { Request, Response } from 'express';
 // import { randomUUID } from 'crypto';
-import { generateTokens } from '../../services/token.service.js';
+import { generateTokens } from '../../services/token.service.js'; 
 
 export const register = async (req: Request, res: Response) => {
 
@@ -136,7 +136,8 @@ export const login = async (req: Request, res: Response) => {
             id: user.id,
             name: user.name,
             role: user.role,
-            organization_id: user.organization_id
+            organization_id: user.organization_id,
+            profile_picture: user.profile_picture,
         };
 
         res.status(200).json({ accessToken, refreshToken, user: userResponse });
