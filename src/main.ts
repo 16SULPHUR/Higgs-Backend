@@ -6,7 +6,7 @@ import pool from './lib/db.js';
 const app = express();
 
 app.use(cors({
-  origin: '*',
+  origin: ['localhost:3000', 'https://higgs-frontend.shipfast.studio'],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
     'Origin',
@@ -15,7 +15,9 @@ app.use(cors({
     'Accept',
     'Authorization',
   ],
+  maxAge: 86400,
 }));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: false }));
 
