@@ -5,7 +5,7 @@ import { resend } from '../../lib/resend.js';
 // import { v4 as uuidv4 } from 'uuid';
 import { Request, Response } from 'express';
 // import { randomUUID } from 'crypto';
-import { generateTokens } from '../../services/token.service.js'; 
+import { generateTokens } from '../../services/token.service.js';
 
 export const register = async (req: Request, res: Response) => {
 
@@ -156,10 +156,13 @@ export const verifyOtp = async (req: Request, res: Response) => {
         const { rows } = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
         const user = rows[0];
         console.log(otp)
+        console.log(user.otp)
+        console.log(new Date())
+        console.log(user.otp_expires_at)
 
         if (!user) return res.status(404).json({ message: 'User not found' });
         if (user.is_verified) return res.json({ message: 'Already verified' });
-        if (user.otp !== otp || new Date() > user.otp_expires_at)
+        if (String(user.otp) !== String(otp) || new Date() > new Date(user.otp_expires_at))
             return res.status(400).json({ message: 'Invalid or expired OTP' });
         await pool.query(`
         UPDATE users SET is_verified = true, otp = NULL, otp_expires_at = NULL
