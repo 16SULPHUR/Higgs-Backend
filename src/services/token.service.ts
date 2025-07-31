@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { randomBytes, randomUUID } from 'crypto';
 
-const ACCESS_TOKEN_EXPIRY = '15s';
+const ACCESS_TOKEN_EXPIRY = '30m';
 const REFRESH_TOKEN_EXPIRY_DAYS = 7;
 
 interface UserForToken {
