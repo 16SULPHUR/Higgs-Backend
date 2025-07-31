@@ -42,8 +42,7 @@ export const updateOwnOrgProfile = async (req: Request, res: Response) => {
         if (rowCount === 0) {
             return res.status(404).json({ message: 'Organization not found.' });
         }
-
-        // --- NOTIFICATION LOGIC ---
+ 
         await resend.emails.send({
             from: `Higgs Workspace <${process.env.INVITE_EMAIL_FROM}>`,
             to: process.env.SUPER_ADMIN_EMAIL_ADDRESS!,

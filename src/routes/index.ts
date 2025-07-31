@@ -7,7 +7,7 @@ import { authenticate, authorize } from '../middleware/auth.js';
 import { ROLES } from '../lib/constants.js';
 import profileRoutes from './profile.route.js';
 import creditRoutes from './credits.route.js';
-import { adminEventsRoutes, eventsRoutes } from './events.route.js';
+import { adminEventsRoutes, eventsRoutes, publicEventsRoutes } from './events.route.js';
 import { authorizeAdmin } from '../middleware/authorizeAdmin.js';
 import adminAuthRoutes from './adminAuthRoutes.js';
 import locationsRoutes from './locationsRoutes.js';
@@ -33,6 +33,7 @@ router.use('/support-tickets', authenticate, userSupportTicketsRouter)
 
 router.use('/orgs', authenticate, authorize([ROLES.ORG_ADMIN]), orgAdminOrgsRoutes)
 
+router.use('/public/events', publicEventsRoutes);
 
 
 router.use('/admin/auth', adminAuthRoutes)

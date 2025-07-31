@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import pool from '../../lib/db.js'; 
+import pool from '../../lib/db.js';
 
 export const listAllEventsForUser = async (req: Request, res: Response) => {
     const user = (req as any).user;
@@ -54,7 +54,10 @@ export const getEventDetails = async (req: Request, res: Response) => {
         const query = `
             SELECT 
                 e.id, e.title, e.description, e.image_url, e.date,
-                (SELECT COUNT(*) FROM event_registrations er WHERE er.event_id = e.id) as registration_count
+                (
+                    (SELECT COUNT(*) FROM event_registrations er WHERE er.event_id = e.id) +
+                    (SELECT COUNT(*) FROM guest_event_registrations ger WHERE ger.event_id = e.id)
+                ) as registration_count
             FROM events e
             WHERE e.id = $1;
         `;
