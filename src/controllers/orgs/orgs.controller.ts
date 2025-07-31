@@ -66,17 +66,34 @@ export const createNewOrg = async (req: Request, res: Response) => {
     }
 
     const { name, plan_id } = req.body;
+    const client = await pool.connect();
 
-    try {
+    try { 
+        await client.query('BEGIN');
+ 
+        const planResult = await client.query('SELECT plan_credits FROM plans WHERE id = $1', [plan_id]);
 
-        const { rows } = await pool.query(
-            'INSERT INTO organizations (name, plan_id) VALUES ($1, $2) RETURNING *',
-            [name, plan_id]
+        if (planResult.rows.length === 0) { 
+            await client.query('ROLLBACK');
+            return res.status(404).json({ message: 'The selected plan was not found.' });
+        }
+        const creditsFromPlan = planResult.rows[0].plan_credits;
+ 
+        const orgResult = await client.query(
+            'INSERT INTO organizations (name, plan_id, credits_pool) VALUES ($1, $2, $3) RETURNING *',
+            [name, plan_id, creditsFromPlan]
         );
-        res.status(201).json(rows[0]);
-    } catch (err) {
+ 
+        await client.query('COMMIT');
+
+        res.status(201).json(orgResult.rows[0]);
+
+    } catch (err) { 
+        await client.query('ROLLBACK');
         console.error('Error creating organization:', err);
         res.status(500).json({ message: 'Failed to create organization' });
+    } finally { 
+        client.release();
     }
 };
 
