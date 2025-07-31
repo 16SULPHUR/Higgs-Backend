@@ -6,7 +6,7 @@ import pool from './lib/db.js';
 const app = express();
 
 app.use(cors({
-  origin: ['localhost:3000', 'https://higgs-frontend.shipfast.studio'],
+  origin: ['http://localhost:3000', 'https://higgs-frontend.shipfast.studio'],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
     'Origin',

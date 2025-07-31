@@ -1,56 +1,53 @@
 import { Request, Response } from 'express';
 import pool from '../../lib/db.js';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs'; 
 import { generateAccessToken } from '../../services/token.service.js';
+ 
 
 export const refreshTokenController = async (req: Request, res: Response) => {
-    const { refreshToken: incomingRefreshToken, expiredAccessToken } = req.body;
+    let checkpoint = Date.now();
+    console.log(`[0ms] --- Refresh Token Start ---`);
 
-    console.log("refreshTokenController called with body:", req.body);
+    const { refreshToken: incomingRefreshToken, expiredAccessToken } = req.body;
 
     if (!incomingRefreshToken || !expiredAccessToken) {
         return res.status(401).json({ message: 'Tokens are required.' });
     }
 
-    let decodedExpiredToken;
-    try {
-        decodedExpiredToken = jwt.verify(expiredAccessToken, process.env.JWT_SECRET!, { ignoreExpiration: true }) as any;
-    } catch (e) {
-        return res.status(401).json({ message: 'Invalid access token format.' });
+    const tokenParts = incomingRefreshToken.split(':');
+    if (tokenParts.length !== 2) {
+        return res.status(401).json({ message: 'Invalid refresh token format.' });
     }
-
-    console.log("decodedExpiredToken")
-    console.log(decodedExpiredToken)
-    const subjectId = decodedExpiredToken.id;
-    if (!subjectId) {
-        return res.status(401).json({ message: 'Invalid token payload.' });
-    }
+    const [selector, verifier] = tokenParts;
 
     const client = await pool.connect();
     try {
         const { rows } = await client.query(
-            'SELECT * FROM refresh_tokens WHERE subject_id = $1 AND is_revoked = FALSE AND expires_at > NOW()',
-            [subjectId]
+            'SELECT * FROM refresh_tokens WHERE selector = $1 AND is_revoked = FALSE',
+            [selector]
         );
+        console.log(`[${Date.now() - checkpoint}ms] Fetched token from DB`);
+        checkpoint = Date.now();
 
         if (rows.length === 0) {
-            return res.status(403).json({ message: 'No valid refresh tokens found for this user.' });
+            return res.status(403).json({ message: 'Refresh token not found or revoked.' });
         }
 
-        let foundToken = null;
-        for (const token of rows) {
-            if (await bcrypt.compare(incomingRefreshToken, token.token_hash)) {
-                foundToken = token;
-                break;
-            }
-        }
+        const foundToken = rows[0];
 
-        if (!foundToken) {
+        const isMatch = await bcrypt.compare(verifier, foundToken.token_hash);
+        console.log(`[${Date.now() - checkpoint}ms] Bcrypt comparison finished`);
+        checkpoint = Date.now();
+
+        if (!isMatch) {
+            await client.query('UPDATE refresh_tokens SET is_revoked = TRUE WHERE family_id = $1', [foundToken.family_id]);
             return res.status(403).json({ message: 'Invalid refresh token. Please log in again.' });
         }
         
-        // --- THIS IS THE ONLY ADDED LOGIC BLOCK ---
+        if (new Date() > new Date(foundToken.expires_at)) {
+            return res.status(403).json({ message: 'Refresh token has expired.' });
+        }
+
         let userStatusQuery;
         if (foundToken.subject_type === 'USER') {
             userStatusQuery = client.query('SELECT id, is_active, role, organization_id FROM users WHERE id = $1', [foundToken.subject_id]);
@@ -59,15 +56,16 @@ export const refreshTokenController = async (req: Request, res: Response) => {
         } else {
             return res.status(403).json({ message: 'Invalid subject type in token.' });
         }
-        
+
         const statusResult = await userStatusQuery;
+        console.log(`[${Date.now() - checkpoint}ms] Fetched user/admin details`);
+        checkpoint = Date.now();
+        
         if (statusResult.rowCount === 0 || !statusResult.rows[0].is_active) {
-            // If the account is inactive, revoke all their refresh tokens for security
-            await client.query('UPDATE refresh_tokens SET is_revoked = TRUE WHERE subject_id = $1', [subjectId]);
+            await client.query('UPDATE refresh_tokens SET is_revoked = TRUE WHERE subject_id = $1', [foundToken.subject_id]);
             return res.status(403).json({ message: 'Your account is inactive. Please contact support.' });
         }
         const freshUserDetails = statusResult.rows[0];
-        // ------------------------------------------
 
         const newAccessToken = generateAccessToken(freshUserDetails, foundToken.subject_type as any);
 
@@ -83,8 +81,7 @@ export const refreshTokenController = async (req: Request, res: Response) => {
     }
 };
 
-export const logoutController = async (req: Request, res: Response) => {
-    // This function remains unchanged as per your request
+export const logoutController = async (req: Request, res: Response) => { 
     const { refreshToken } = req.body;
     if (refreshToken) {
         const { rows } = await pool.query('SELECT * FROM refresh_tokens WHERE is_revoked = FALSE');
