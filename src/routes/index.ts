@@ -30,7 +30,7 @@ router.use('/profile', authenticate, profileRoutes);
 router.use('/room-types', authenticate, typeOfRoomsRouter)
 router.use('/users', authenticate, usersRoutes)
 router.use('/support-tickets', authenticate, userSupportTicketsRouter)
-
+router.use('/meeting-rooms', meetingRoomsRoutes);
 router.use('/orgs', authenticate, authorize([ROLES.ORG_ADMIN]), orgAdminOrgsRoutes)
 
 router.use('/public/events', publicEventsRoutes);
@@ -45,7 +45,6 @@ router.use('/admin/orgs', (req, res, next) => authorizeAdmin(req, res, next), ad
 
 router.use('/admin/events', (req, res, next) => authorizeAdmin(req, res, next), adminEventsRoutes);
 
-router.use('/meeting-rooms', meetingRoomsRoutes);
 
 router.use('/admin/room-types', (req, res, next) => authorizeAdmin(req, res, next), typeOfRoomsRouter)
 

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import pool from '../../lib/db.js';
-import { resend } from '../../lib/resend.js';
+import { resend } from '../../lib/resend.js'; 
 
 
 const MAX_BOOKING_DAYS_AHEAD = 3;
@@ -9,7 +9,7 @@ const COOLDOWN_WINDOW_MINUTES = 30;
 const CANCELLATION_MINUTES_BEFORE = 15;
 const MAX_CANCELLATIONS_PER_MONTH = 5;
 
-function parseDateWithOffset(dateStr: string): number {
+export function parseDateWithOffset(dateStr: string): number {
     const match = dateStr.match(
         /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?([+-])(\d{2}):(\d{2})$/
     ); // Allow optional milliseconds
@@ -40,6 +40,7 @@ function parseDateWithOffset(dateStr: string): number {
 
 export const createBooking = async (req: Request, res: Response) => {
     const { type_of_room_id, start_time, end_time } = req.body;
+    console.log(start_time, end_time)
     const user = (req as any).user;
 
     console.log("create booking")

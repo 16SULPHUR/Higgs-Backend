@@ -8,10 +8,10 @@ export const refreshTokenController = async (req: Request, res: Response) => {
     let checkpoint = Date.now();
     console.log(`[0ms] --- Refresh Token Start ---`);
 
-    const { refreshToken: incomingRefreshToken, expiredAccessToken } = req.body;
+    const { refreshToken: incomingRefreshToken } = req.body;
 
-    if (!incomingRefreshToken || !expiredAccessToken) {
-        return res.status(401).json({ message: 'Tokens are required.' });
+    if (!incomingRefreshToken) {
+        return res.status(401).json({ message: 'Refresh token is required.' });
     }
 
     const tokenParts = incomingRefreshToken.split(':');
@@ -69,6 +69,8 @@ export const refreshTokenController = async (req: Request, res: Response) => {
 
         const newAccessToken = generateAccessToken(freshUserDetails, foundToken.subject_type as any);
 
+        console.log("newAccessToken")
+        console.log(newAccessToken)
         res.status(200).json({
             accessToken: newAccessToken,
         });
