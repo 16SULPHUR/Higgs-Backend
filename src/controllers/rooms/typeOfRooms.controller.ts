@@ -14,7 +14,9 @@ export const getAllRoomTypes = async (req: Request, res: Response) => {
 export const getRoomTypeById = async (req: Request, res: Response) => {
     const { id } = req.params;
     try {
-        const { rows, rowCount } = await pool.query('SELECT * FROM type_of_rooms WHERE id = $1', [id]);
+        
+        const { rows, rowCount } = await pool.query('SELECT tor.*, l.name as location_name FROM type_of_rooms tor JOIN locations l ON tor.location_id = l.id WHERE tor.id = $1', [id]);
+
         if (rowCount === 0) {
             return res.status(404).json({ message: 'Room type not found' });
         }

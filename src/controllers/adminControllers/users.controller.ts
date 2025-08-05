@@ -37,7 +37,7 @@ export const createNewUserByAdmin = async (req: Request, res: Response) => {
         const { rows } = await client.query(query, values);
         
         await resend.emails.send({
-            from: 'Higgs Workspace <welcome@yourdomain.com>',
+            from: `Higgs Workspace <${process.env.EMAIL_FROM}>`,
             to: email,
             subject: 'Your Higgs Workspace Account has been Created',
             html: `

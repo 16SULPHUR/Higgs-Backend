@@ -192,3 +192,35 @@ export const getAllUsersForMemberBook = async (req: Request, res: Response) => {
         res.status(500).json({ message: 'Failed to fetch members.' });
     }
 };
+
+
+ 
+export const getInvitableUsers = async (req: Request, res: Response) => {
+    const user = (req as any).user;
+    const { bookingId } = req.query;
+
+    if (!bookingId) {
+        return res.status(400).json({ message: 'A bookingId query parameter is required.' });
+    }
+
+    try {
+        const query = `
+            SELECT id, name, email 
+            FROM users 
+            WHERE 
+                is_verified = TRUE 
+                AND role != 'SUPER_ADMIN'
+                AND id != $1 -- Exclude the current user
+                AND email NOT IN (
+                    -- Exclude users whose email is already in the guest list for this booking
+                    SELECT guest_email FROM guest_invitations WHERE booking_id = $2
+                )
+            ORDER BY name ASC;
+        `;
+        const { rows } = await pool.query(query, [user.id, bookingId]);
+        res.json(rows);
+    } catch (err) {
+        console.error('Error fetching invitable users:', err);
+        res.status(500).json({ message: 'Failed to fetch invitable users.' });
+    }
+};

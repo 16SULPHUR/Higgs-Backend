@@ -24,7 +24,7 @@ async function sendEventReminders() {
             for (const registrant of registrants) {
                 console.log(`Sending reminder for ${event.title} to ${registrant.email}`);
                 await resend.emails.send({
-                    from: 'Higgs Workspace <events@yourdomain.com>',
+                    from: `Higgs Workspace <${process.env.EMAIL_FROM}>`,
                     to: registrant.email,
                     subject: `Reminder: ${event.title} is tomorrow!`,
                     html: `<p>Hi ${registrant.name},</p><p>This is a reminder that the event <strong>${event.title}</strong> is happening tomorrow. We look forward to seeing you!</p>`,

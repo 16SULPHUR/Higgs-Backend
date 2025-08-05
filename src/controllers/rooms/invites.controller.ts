@@ -17,9 +17,7 @@ export const inviteGuestToBooking = async (req: Request, res: Response) => {
     try {
         await client.query('BEGIN');
 
-        // --- THIS IS THE FIX ---
-        // Step 1: Fetch all necessary data in one go: booking details AND the inviter's name.
-        const detailsQuery = `
+       const detailsQuery = `
             SELECT 
                 b.user_id, b.start_time, b.end_time,
                 r.name as room_instance_name,
@@ -42,20 +40,17 @@ export const inviteGuestToBooking = async (req: Request, res: Response) => {
         }
         
         const bookingDetails = bookingOwnerResult.rows[0];
-        
-        // Step 2: Verify Ownership using the ID from the token
+         
         if (bookingDetails.user_id !== userFromToken.id) {
             await client.query('ROLLBACK');
             return res.status(403).json({ message: 'Forbidden: You do not have permission to invite guests to this booking.' });
         }
-
-        // Step 3: Insert the invitation record
+ 
         await client.query(
             'INSERT INTO guest_invitations (booking_id, sent_by_user_id, guest_name, guest_email) VALUES ($1, $2, $3, $4)',
             [bookingId, userFromToken.id, guestName, guestEmail]
         );
-
-        // Step 4: Send the email using the fetched inviter_name
+ 
         const startTime = new Date(bookingDetails.start_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' });
         const endTime = new Date(bookingDetails.end_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' });
         const date = new Date(bookingDetails.start_time).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
@@ -117,5 +112,97 @@ export const getBookingInvitations = async (req: Request, res: Response) => {
         res.json(rows);
     } catch (err) {
         res.status(500).json({ message: 'Failed to fetch invitations.' });
+    }
+};
+
+ 
+interface Invitee {
+    name: string;
+    email: string;
+}
+
+export const bulkInviteToBooking = async (req: Request, res: Response) => {
+    const { bookingId } = req.params;
+    const { invitees } = req.body as { invitees: Invitee[] };
+    const userFromToken = (req as any).user;
+
+    if (!Array.isArray(invitees) || invitees.length === 0) {
+        return res.status(400).json({ message: 'An array of invitees is required.' });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        const detailsQuery = `
+            SELECT b.user_id, b.start_time, b.end_time, r.name as room_instance_name,
+                   tor.name as room_type_name, l.name as location_name, l.address as location_address,
+                   u.name as inviter_name
+            FROM bookings b
+            JOIN rooms r ON b.room_id = r.id
+            JOIN type_of_rooms tor ON r.type_of_room_id = tor.id
+            JOIN locations l ON tor.location_id = l.id
+            JOIN users u ON b.user_id = u.id
+            WHERE b.id = $1;
+        `;
+        const bookingOwnerResult = await client.query(detailsQuery, [bookingId]);
+
+        if (bookingOwnerResult.rowCount === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ message: 'Booking not found.' });
+        }
+        
+        const bookingDetails = bookingOwnerResult.rows[0];
+        if (bookingDetails.user_id !== userFromToken.id) {
+            await client.query('ROLLBACK');
+            return res.status(403).json({ message: 'Forbidden: You do not have permission to invite to this booking.' });
+        }
+
+        const insertQuery = 'INSERT INTO guest_invitations (booking_id, sent_by_user_id, guest_name, guest_email) VALUES ($1, $2, $3, $4)';
+        const emailPromises = [];
+
+        const startTime = new Date(bookingDetails.start_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' });
+        const endTime = new Date(bookingDetails.end_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' });
+        const date = new Date(bookingDetails.start_time).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+        for (const guest of invitees) {
+            await client.query(insertQuery, [bookingId, userFromToken.id, guest.name, guest.email]);
+            
+            const emailPromise = resend.emails.send({
+                from: `Higgs Workspace <${process.env.INVITE_EMAIL_FROM}>`,
+                to: guest.email,
+                subject: `Meeting Invitation: ${bookingDetails.room_type_name} at Higgs Workspace`,
+                html: `
+                    <div style="font-family: sans-serif; padding: 20px; color: #333;">
+                        <h2>Hello ${guest.name},</h2>
+                        <p><strong>${bookingDetails.inviter_name}</strong> has invited you to a meeting at Higgs Workspace.</p>
+                        <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-top: 20px;">
+                            <h3 style="margin-top: 0;">Meeting Details</h3>
+                            <p><strong>Room:</strong> ${bookingDetails.room_type_name} (${bookingDetails.room_instance_name})</p>
+                            <p><strong>Date:</strong> ${date}</p>
+                            <p><strong>Time:</strong> ${startTime} - ${endTime} (IST)</p>
+                            <p><strong>Location:</strong> ${bookingDetails.location_name}</p>
+                            <p style="font-size: 0.9em; color: #555;">${bookingDetails.location_address}</p>
+                        </div>
+                    </div>
+                `
+            });
+            emailPromises.push(emailPromise);
+        }
+        
+        await Promise.all(emailPromises);
+        
+        await client.query('COMMIT');
+        res.status(201).json({ message: `Successfully sent ${invitees.length} invitation(s).` });
+
+    } catch (err: any) {
+        await client.query('ROLLBACK');
+        if (err.code === '23505') {
+            return res.status(409).json({ message: 'One or more guests have already been invited to this booking.' });
+        }
+        console.error('Bulk invite error:', err);
+        res.status(500).json({ message: 'Failed to send invitations due to a server error.' });
+    } finally {
+        client.release();
     }
 };

@@ -12,7 +12,10 @@ export const listAllEventsForUser = async (req: Request, res: Response) => {
                 e.description,
                 e.image_url,
                 e.date,
-                (SELECT COUNT(*) FROM event_registrations er_count WHERE er_count.event_id = e.id) as registration_count,
+                (
+                    (SELECT COUNT(*) FROM event_registrations er WHERE er.event_id = e.id) +
+                    (SELECT COUNT(*) FROM guest_event_registrations ger WHERE ger.event_id = e.id)
+                ) as registration_count,
                 EXISTS (
                     SELECT 1 
                     FROM event_registrations er 
@@ -79,5 +82,38 @@ export const getRegistrationStatus = async (req: Request, res: Response) => {
         res.json(rows[0]);
     } catch (err) {
         res.status(500).json({ message: 'Failed to fetch registration status.' });
+    }
+};
+
+export const listAllEventsForGuest = async (req: Request, res: Response) => {
+    console.log(req.body);
+
+    try {
+        const query = `
+            SELECT 
+                e.id,
+                e.title,
+                e.description,
+                e.image_url,
+                e.date,
+                (
+                    (SELECT COUNT(*) FROM event_registrations er WHERE er.event_id = e.id) +
+                    (SELECT COUNT(*) FROM guest_event_registrations ger WHERE ger.event_id = e.id)
+                ) as registration_count
+            FROM events e
+            WHERE 
+                e.date >= NOW()
+            ORDER BY 
+                e.date ASC;
+        `;
+        const { rows } = await pool.query(query );
+
+
+
+
+        res.json(rows);
+    } catch (err) {
+        console.error('Error fetching events for user:', err);
+        res.status(500).json({ message: 'Failed to fetch events.' });
     }
 };

@@ -287,7 +287,7 @@ export const cancelBooking = async (req: Request, res: Response) => {
     const details = detailsResult.rows[0];
 
     await resend.emails.send({
-        from: 'Higgs Workspace <confirmations@yourdomain.com>',
+        from:  `Higgs Workspace <${process.env.INVITE_EMAIL_FROM}>`,
         to: details.email,
         subject: `Booking Cancelled: ${details.type_name}`,
         html: `<p>Hi ${details.name},</p><p>Your booking for <strong>${details.type_name}</strong> has been successfully cancelled.</p>`,
@@ -456,7 +456,7 @@ export const rescheduleBooking = async (req: Request, res: Response) => {
 
             const emailPromises = guestsResult.rows.map(guest => 
                 resend.emails.send({
-                    from: `Higgs Workspace <updates@yourdomain.com>`,
+                    from: `Higgs Workspace <${process.env.INVITE_EMAIL_FROM}>`,
                     to: guest.guest_email,
                     subject: `Update: Your Meeting at Higgs Workspace has been Rescheduled`,
                     html: `<div style="font-family: sans-serif; padding: 20px; color: #333;"><h2>Hello ${guest.guest_name},</h2><p>Please note, your meeting with <strong>${inviter_name}</strong> has been updated.</p><p style="color: #d9534f;">Please disregard any previous invitations.</p><div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-top: 20px;"><h3 style="margin-top: 0;">New Meeting Details</h3><p><strong>Room:</strong> ${detailsForEmail.room_type_name} (${detailsForEmail.room_instance_name})</p><p><strong>Date:</strong> ${newDate}</p><p><strong>Time:</strong> ${newStartTime} - ${newEndTime} (IST)</p><p><strong>Location:</strong> ${detailsForEmail.location_name}</p><p style="font-size: 0.9em; color: #555;">${detailsForEmail.location_address}</p></div><p style="margin-top: 30px; font-size: 0.8em; color: #777;">This is an automated notification.</p></div>`

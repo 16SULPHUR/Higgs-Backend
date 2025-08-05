@@ -19,7 +19,7 @@ async function checkCreditWarnings() {
         for (const org of orgs) {
             console.log(`Organization ${org.org_name} is low on credits. Sending warning.`);
             await resend.emails.send({
-                from: 'Higgs Workspace <billing@yourdomain.com>',
+                from: `Higgs Workspace <${process.env.EMAIL_FROM}>`,
                 to: org.admin_email,
                 subject: 'Low Credit Warning for your Organization',
                 html: `<p>Hi ${org.admin_name},</p><p>This is a notification that your organization, <strong>${org.org_name}</strong>, has 10% or less of its monthly credits remaining.</p>`,

@@ -11,7 +11,7 @@ import { deregisterInEvent, getEventRegistrations, registerInEvent } from '../co
 // import { ADMIN_ROLES } from '../lib/constants.js';
 import multer from 'multer'
 import { authorizeAdmin } from '../middleware/authorizeAdmin.js';
-import { getEventDetails, getRegistrationStatus, listAllEventIds, listAllEventsForUser } from '../controllers/events/userEvents.controller.js';
+import { getEventDetails, getRegistrationStatus, listAllEventIds, listAllEventsForGuest, listAllEventsForUser } from '../controllers/events/userEvents.controller.js';
 import { authenticate } from '../middleware/auth.js';
 import { registerGuestForEvent } from '../controllers/events/publicEvents.controller.js';
 
@@ -41,7 +41,7 @@ adminEventsRoutes.get('/:eventId/registrations', (req, res, next) => authorizeAd
 
 // -----------------------------------------
 
-eventsRoutes.get('/', authenticate, listAllEventsForUser);
+eventsRoutes.get('/', listAllEventsForUser);
 
 eventsRoutes.get('/ids', listAllEventIds);
 
@@ -57,6 +57,7 @@ eventsRoutes.delete('/:eventId/cancel-registration', authenticate, deregisterInE
 
 // -------------------------------------------
 
+publicEventsRoutes.get('/', listAllEventsForGuest);
 publicEventsRoutes.post('/:eventId/register-guest', registerGuestForEvent);
 
 
