@@ -41,7 +41,7 @@ adminEventsRoutes.get('/:eventId/registrations', (req, res, next) => authorizeAd
 
 // -----------------------------------------
 
-eventsRoutes.get('/', listAllEventsForUser);
+eventsRoutes.get('/', authenticate, listAllEventsForUser);
 
 eventsRoutes.get('/ids', listAllEventIds);
 
