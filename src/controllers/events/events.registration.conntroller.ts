@@ -1,38 +1,59 @@
 import { Request, Response } from 'express';
 import pool from '../../lib/db.js';
 import { resend } from '../../lib/resend.js';
-
+ 
 export const getEventRegistrations = async (req: Request, res: Response) => {
     const { eventId } = req.params;
     try {
-
-        const eventCheck = await pool.query('SELECT id FROM events WHERE id = $1', [eventId]);
+        const eventCheck = await pool.query('SELECT title FROM events WHERE id = $1', [eventId]);
         if (eventCheck.rowCount === 0) {
             return res.status(404).json({ message: 'Event not found' });
         }
+        const eventTitle = eventCheck.rows[0].title;
 
-
-        const query = `
+        const query = ` 
             SELECT 
                 u.id, 
                 u.name, 
                 u.email,
-                er.created_at as registration_date
+                er.created_at as registration_date,
+                'MEMBER' as registration_type
             FROM users u
             JOIN event_registrations er ON u.id = er.user_id
             WHERE er.event_id = $1
-            ORDER BY er.created_at DESC;
+            
+            UNION ALL
+             
+            SELECT 
+                ger.id, 
+                ger.guest_name as name, 
+                ger.guest_email as email,
+                ger.created_at as registration_date,
+                'GUEST' as registration_type
+            FROM guest_event_registrations ger
+            WHERE ger.event_id = $1
+            
+            ORDER BY registration_date DESC;
         `;
-
         const { rows } = await pool.query(query, [eventId]);
+        
+        const members = rows.filter(r => r.registration_type === 'MEMBER');
+        const guests = rows.filter(r => r.registration_type === 'GUEST');
 
-        res.json(rows);
+        res.json({
+            eventTitle: eventTitle,
+            registrations: {
+                members: members,
+                guests: guests
+            }
+        });
 
     } catch (err) {
         console.error(`Error fetching registrations for event ${eventId}:`, err);
         res.status(500).json({ message: 'Failed to fetch event registrations' });
     }
 };
+
 
 
 export const registerInEvent = async (req: Request, res: Response) => {

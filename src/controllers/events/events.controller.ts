@@ -47,12 +47,12 @@ export const createEvent = async (req: Request, res: Response) => {
         res.status(500).json({ message: 'Failed to create event' });
     }
 };
- 
+
 export const updateEvent = async (req: Request, res: Response) => {
     console.log(`[Backend] Received PATCH for event ${req.params.id}`);
     console.log("[Backend] Body:", req.body);
     console.log("[Backend] File:", req.file ? req.file.originalname : "No file uploaded");
-    
+
     const { id } = req.params;
     const { title, description, date } = req.body;
     const file = req.file;
@@ -69,7 +69,7 @@ export const updateEvent = async (req: Request, res: Response) => {
             values.push(value);
         }
     };
-    
+
     // Explicitly check for the fields you allow to be updated
     addField('title', title);
     addField('description', description);
@@ -143,14 +143,15 @@ export const getAllEventsWithDetails = async (req: Request, res: Response) => {
     console.log(req.body)
     try {
         const query = `
-            SELECT 
-                e.*, 
-                COUNT(er.id)::INT AS registration_count 
-            FROM events e
-            LEFT JOIN event_registrations er ON e.id = er.event_id
-            GROUP BY e.id
-            ORDER BY e.date DESC;
-        `;
+    SELECT
+        e.*,
+        (
+            (SELECT COUNT(*) FROM event_registrations er WHERE er.event_id = e.id) +
+            (SELECT COUNT(*) FROM guest_event_registrations ger WHERE ger.event_id = e.id)
+        ) AS registration_count
+    FROM events e
+    ORDER BY e.date DESC;
+`;
         const { rows } = await pool.query(query);
         res.json(rows);
     } catch (err) {
