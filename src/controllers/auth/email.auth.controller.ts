@@ -34,8 +34,8 @@ export const register = async (req: Request, res: Response) => {
         const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
         await pool.query(`
-            INSERT INTO users (name, email, password, phone, otp, otp_expires_at, role, location_id)
-            VALUES ($1, $2, $3, $4, $5, $6, 'INDIVIDUAL_USER', $7)
+            INSERT INTO users (name, email, password, phone, otp, otp_expires_at, role, location_id, approval_status, is_active)
+            VALUES ($1, $2, $3, $4, $5, $6, 'INDIVIDUAL_USER', $7, 'PENDING', FALSE)
         `, [name, email, hashed, phone, otp, otpExpiresAt, location_id]);
 
         await resend.emails.send({
@@ -128,6 +128,9 @@ export const login = async (req: Request, res: Response) => {
         }
         if (!user.is_verified) {
             return res.status(403).json({ message: 'Email not verified.' });
+        }
+        if (user.approval_status !== 'APPROVED') {
+            return res.status(403).json({ message: 'Your account is pending approval by an administrator.' });
         }
 
         const { accessToken, refreshToken } = await generateTokens(user, 'USER');

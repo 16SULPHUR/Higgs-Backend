@@ -50,7 +50,7 @@ export const refreshTokenController = async (req: Request, res: Response) => {
 
         let userStatusQuery;
         if (foundToken.subject_type === 'USER') {
-            userStatusQuery = client.query('SELECT id, is_active, role, organization_id FROM users WHERE id = $1', [foundToken.subject_id]);
+            userStatusQuery = client.query("SELECT id, is_active, role, organization_id FROM users WHERE id = $1 AND approval_status = 'APPROVED'", [foundToken.subject_id]);
         } else if (foundToken.subject_type === 'ADMIN') {
             userStatusQuery = client.query('SELECT id, is_active, role, location_id FROM admins WHERE id = $1', [foundToken.subject_id]);
         } else {

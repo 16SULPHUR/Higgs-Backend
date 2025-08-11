@@ -11,6 +11,7 @@ import { adminEventsRoutes, eventsRoutes, publicEventsRoutes } from './events.ro
 import { authorizeAdmin } from '../middleware/authorizeAdmin.js';
 import adminAuthRoutes from './adminAuthRoutes.js';
 import locationsRoutes from './locationsRoutes.js';
+import publicLocationsRoutes from './publicLocations.route.js';
 import { adminMeetingRoomsRoutes, meetingRoomsRoutes } from './meetingRooms.route.js';
 import typeOfRoomsRouter from './adminTypeOfRooms.route.js';
 import roomsRouter from './roomsRoutes.js';
@@ -59,6 +60,9 @@ router.use('/admin/bookings', (req, res, next) => authorizeAdmin(req, res, next)
 router.use('/admin/assign-credits', (req, res, next) => authorizeAdmin(req, res, next), creditRoutes);
 
 router.use('/admin/locations', locationsRoutes);
+
+// Public locations for signup
+router.use('/public/locations', publicLocationsRoutes);
 
 router.use('/admin/support-tickets', (req, res, next) => authorizeAdmin(req, res, next), supportTicketsRouter);
 
