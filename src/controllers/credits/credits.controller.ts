@@ -14,12 +14,17 @@ export const assignCredits = async (req: Request, res: Response) => {
     try {
         await client.query('BEGIN');
 
-        const userCheck = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+        const userCheck = await pool.query('SELECT id, individual_credits, organization_id, name, email FROM users WHERE id = $1', [id]);
 
         if (userCheck.rowCount > 0) {
-            const currentCredits = userCheck.rows[0].individual_credits;
+            const user = userCheck.rows[0];
+            if (user.organization_id) {
+                await client.query('ROLLBACK');
+                return res.status(400).json({ message: 'User is part of an organization. Assign credits to the organization instead.' });
+            }
+            const currentCredits = user.individual_credits || 0;
             const { rows } = await client.query(
-                'UPDATE users SET individual_credits = $1 WHERE id = $2 RETURNING id, individual_credits',
+                'UPDATE users SET individual_credits = GREATEST(0, $1) WHERE id = $2 RETURNING id, individual_credits',
                 [currentCredits + creditsToAssign, id]
             );
             await client.query('COMMIT');
