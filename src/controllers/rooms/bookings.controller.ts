@@ -313,11 +313,29 @@ export const listUserBookings = async (req: Request, res: Response) => {
             `SELECT 
                 b.id, b.start_time, b.end_time, b.status,
                 r.name as room_instance_name,
-                tor.name as room_type_name
+                tor.name as room_type_name,
+                tor.room_icon,
+                (
+                  SELECT COUNT(*)::int FROM guest_invitations gi WHERE gi.booking_id = b.id
+                ) AS guests_count,
+                COALESCE(
+                  (
+                    SELECT array_agg(t.guest_name)
+                    FROM (
+                      SELECT gi.guest_name
+                      FROM guest_invitations gi
+                      WHERE gi.booking_id = b.id
+                      ORDER BY gi.created_at DESC
+                      LIMIT 2
+                    ) t
+                  ),
+                  ARRAY[]::text[]
+                ) AS guests_preview
              FROM bookings b 
              JOIN rooms r ON b.room_id = r.id
              JOIN type_of_rooms tor ON r.type_of_room_id = tor.id
-             WHERE b.user_id = $1 ORDER BY b.start_time DESC`,
+             WHERE b.user_id = $1
+             ORDER BY b.start_time DESC`,
             [user_id]
         );
         res.json(rows);

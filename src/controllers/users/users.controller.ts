@@ -194,6 +194,29 @@ export const getAllUsersForMemberBook = async (req: Request, res: Response) => {
 };
 
 
+export const getPublicMemberNames = async (req: Request, res: Response) => {
+    console.log("getPublicMemberNames")
+    console.log(req.user)
+    try {
+        const query = `
+            SELECT 
+                u.id, 
+                u.name
+            FROM users u
+            WHERE 
+                u.is_verified = TRUE 
+                AND u.role IN ('INDIVIDUAL_USER', 'ORG_USER', 'ORG_ADMIN')
+            ORDER BY u.name ASC;
+        `;
+        const { rows } = await pool.query(query);
+        res.json(rows);
+    } catch (err) {
+        console.error('Error fetching public member names:', err);
+        res.status(500).json({ message: 'Failed to fetch member names.' });
+    }
+};
+
+
  
 export const getInvitableUsers = async (req: Request, res: Response) => {
     const user = (req as any).user;

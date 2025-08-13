@@ -16,7 +16,7 @@ import { adminMeetingRoomsRoutes, meetingRoomsRoutes } from './meetingRooms.rout
 import typeOfRoomsRouter from './adminTypeOfRooms.route.js';
 import roomsRouter from './roomsRoutes.js';
 import adminBookingRoutes from './adminBooking.route.js';
-import { adminUsersRoutes, usersRoutes } from './users.route.js';
+import { adminUsersRoutes, usersRoutes, publicUsersRoutes } from './users.route.js';
 import { adminOrgsRoutes, orgAdminOrgsRoutes } from './orgs.route.js';
 import supportTicketsRouter from './adminSupportTicketsRoutes.js';
 import userSupportTicketsRouter from './userSupportTicketsRoutes.js';
@@ -30,6 +30,7 @@ router.use('/events', eventsRoutes);
 router.use('/profile', authenticate, profileRoutes);
 router.use('/room-types', authenticate, typeOfRoomsRouter)
 router.use('/users', authenticate, usersRoutes)
+router.use('/public/users', publicUsersRoutes)
 router.use('/support-tickets', authenticate, userSupportTicketsRouter)
 router.use('/meeting-rooms', meetingRoomsRoutes);
 router.use('/orgs', authenticate, authorize([ROLES.ORG_ADMIN]), orgAdminOrgsRoutes)
