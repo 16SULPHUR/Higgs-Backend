@@ -4,8 +4,14 @@ import pool from '../../lib/db.js';
 export const getAllRoomTypes = async (req: Request, res: Response) => {
     console.log(req.body)
     try {
-        const { rows } = await pool.query('SELECT * FROM type_of_rooms ORDER BY name ASC');
-        res.json(rows);
+        const { rows } = await pool.query(`
+            SELECT tor.*, l.name as location_name
+            FROM type_of_rooms tor
+            JOIN locations l ON tor.location_id = l.id
+            ORDER BY tor.name ASC
+        `); 
+        const result = rows.map(({ location_id, ...rest }) => rest);
+        res.json(result);
     } catch (err) {
         res.status(500).json({ message: 'Failed to fetch room types' });
     }
