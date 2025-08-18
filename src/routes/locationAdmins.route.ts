@@ -21,11 +21,9 @@ locationAdminsRoutes.get('/', getAllLocationAdmins);
 
 // Get location admin by ID
 locationAdminsRoutes.get('/:id', getLocationAdminById);
-
-// Update location admin
+ 
 locationAdminsRoutes.put('/:id', updateLocationAdmin);
-
-// Delete location admin
+ 
 locationAdminsRoutes.delete('/:id', deleteLocationAdmin);
 
 export default locationAdminsRoutes;

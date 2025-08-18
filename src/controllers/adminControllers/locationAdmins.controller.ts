@@ -32,12 +32,7 @@ export const createLocationAdmin = async (req: Request, res: Response) => {
             return res.status(400).json({ message: 'The provided location_id does not exist.' });
         }
 
-        // Check if location already has an admin
-        const existingLocationAdmin = await client.query('SELECT id FROM admins WHERE location_id = $1 AND role = $2', [location_id, ADMIN_ROLES.LOCATION_ADMIN]);
-        if (existingLocationAdmin.rowCount > 0) {
-            await client.query('ROLLBACK');
-            return res.status(409).json({ message: 'This location already has an admin assigned.' });
-        }
+        // Allow multiple admins per location: no uniqueness restriction on location_id
 
         // Generate password and hash it
         const generatedPassword = randomBytes(10).toString('hex');
@@ -181,12 +176,7 @@ export const updateLocationAdmin = async (req: Request, res: Response) => {
             return res.status(400).json({ message: 'The provided location_id does not exist.' });
         }
 
-        // Check if new location already has another admin
-        const locationAdminCheck = await client.query('SELECT id FROM admins WHERE location_id = $1 AND role = $2 AND id != $3', [location_id, ADMIN_ROLES.LOCATION_ADMIN, id]);
-        if (locationAdminCheck.rowCount > 0) {
-            await client.query('ROLLBACK');
-            return res.status(409).json({ message: 'This location already has another admin assigned.' });
-        }
+        // Allow multiple admins per location: no uniqueness restriction on location_id
 
         // Update the location admin
         const { rows } = await client.query(
