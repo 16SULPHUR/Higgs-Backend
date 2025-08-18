@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 import pool from '../../lib/db.js';
 import bcrypt from 'bcryptjs';
-import { randomBytes } from 'crypto';
-import { resend } from '../../lib/resend.js';
+import { randomBytes } from 'crypto'; 
+import { zeptoClient } from '../../lib/zeptiMail.js';
 
 export const createNewUserByAdmin = async (req: Request, res: Response) => {
     const {
@@ -70,23 +70,34 @@ export const createNewUserByAdmin = async (req: Request, res: Response) => {
         ];
 
         const { rows } = await client.query(insertQuery, insertValues);
- 
-        const emailResponse = await resend.emails.send({
-            from: `Higgs Workspace <${process.env.EMAIL_FROM}>`,
-            to: email,
-            subject: 'Your Higgs Workspace Account Has Been Created',
-            html: `
-                <div style="font-family: sans-serif; padding: 20px; color: #333;">
-                    <h2>Welcome, ${name}!</h2>
-                    <p>An administrator has created your account on Higgs Workspace. Here are your login credentials:</p>
-                    <div style="border: 1px solid #ddd; padding: 15px; background-color: #f9f9f9;">
-                        <p><strong>Email:</strong> ${email}</p>
-                        <p><strong>Password:</strong> ${generatedPassword}</p>
-                    </div>
-                    <p>Please log in and change your password as soon as possible from your profile page.</p>
-                </div>
-            `
+
+        const emailResponse = await zeptoClient.sendMail({
+            from: {
+                address: process.env.EMAIL_FROM as string,
+                name: "Higgs Workspace",
+            },
+            to: [
+                {
+                    email_address: {
+                        address: email,
+                        name: name,
+                    },
+                },
+            ],
+            subject: "Your Higgs Workspace Account Has Been Created",
+            htmlbody: `
+    <div style="font-family: sans-serif; padding: 20px; color: #333;">
+      <h2>Welcome, ${name}!</h2>
+      <p>An administrator has created your account on Higgs Workspace. Here are your login credentials:</p>
+      <div style="border: 1px solid #ddd; padding: 15px; background-color: #f9f9f9;">
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Password:</strong> ${generatedPassword}</p>
+      </div>
+      <p>Please log in and change your password as soon as possible from your profile page.</p>
+    </div>
+  `,
         });
+
 
         console.log("emailResponse===========================")
         console.log(emailResponse)
@@ -129,7 +140,7 @@ export const getAllUsers = async (req: Request, res: Response) => {
 
 export const addUserToOrg = async (req: Request, res: Response) => {
     const { userId, orgId } = req.params;
-    
+
     try {
         const userUpdate = await pool.query('UPDATE users SET organization_id = $1 WHERE id = $2 RETURNING email, name', [orgId, userId]);
         if (userUpdate.rowCount === 0) return res.status(404).json({ message: 'User not found.' });
@@ -138,12 +149,26 @@ export const addUserToOrg = async (req: Request, res: Response) => {
         const user = userUpdate.rows[0];
         const orgName = orgDetails.rows[0].name;
 
-        await resend.emails.send({
-            from: `Higgs Workspace <${process.env.INVITE_EMAIL_FROM}>`,
-            to: user.email,
+        await zeptoClient.sendMail({
+            from: {
+                address: process.env.INVITE_EMAIL_FROM as string,
+                name: "Higgs Workspace",
+            },
+            to: [
+                {
+                    email_address: {
+                        address: user.email,
+                        name: user.name,
+                    },
+                },
+            ],
             subject: `You've been added to ${orgName} on Higgs Workspace`,
-            html: `<p>Hi ${user.name},</p><p>An administrator has added you to the <strong>${orgName}</strong> organization.</p>`,
+            htmlbody: `
+                <p>Hi ${user.name},</p>
+                <p>An administrator has added you to the <strong>${orgName}</strong> organization.</p>
+            `,
         });
+
 
         res.status(200).json({ message: 'User successfully added to organization.' });
     } catch (err) {
@@ -217,7 +242,7 @@ export const getPublicMemberNames = async (req: Request, res: Response) => {
 };
 
 
- 
+
 export const getInvitableUsers = async (req: Request, res: Response) => {
     const user = (req as any).user;
     const { bookingId } = req.query;

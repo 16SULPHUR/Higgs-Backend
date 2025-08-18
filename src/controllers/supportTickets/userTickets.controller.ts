@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import pool from '../../lib/db.js';
-import { resend } from '../../lib/resend.js';
 import { validateNewTicketByUser } from '../../validations/userSupportTicketValidator.js';
+import { zeptoClient } from '../../lib/zeptiMail.js';
 
 export const listUserTickets = async (req: Request, res: Response) => {
     const user = (req as any).user;
@@ -68,24 +68,32 @@ export const createTicket = async (req: Request, res: Response) => {
         const adminEmails = adminEmailsResult.rows.map(admin => admin.email);
 
         if (adminEmails.length > 0) {
-            // 3. Use the fetched user details in the email template.
-            await resend.emails.send({
-                from: `Higgs Workspace Alerts <${process.env.INVITE_EMAIL_FROM}>`,
-                to: adminEmails,
+            await zeptoClient.sendMail({
+                from: {
+                    address: process.env.INVITE_EMAIL_FROM as string,
+                    name: "Higgs Workspace Alerts",
+                },
+                to: adminEmails.map((email: string) => ({
+                    email_address: {
+                        address: email,
+                        name: "Admin",
+                    },
+                })),
                 subject: `New Support Ticket [#${newTicket.id}]: ${newTicket.subject}`,
-                html: `
-                    <div style="font-family: sans-serif; padding: 20px;">
-                        <h2>New Support Ticket Received</h2>
-                        <p>A new support ticket has been created by <strong>${userDetails.name} (${userDetails.email})</strong>.</p>
-                        <div style="border: 1px solid #ddd; padding: 15px; margin-top: 20px;">
-                            <p><strong>Ticket ID:</strong> #${newTicket.id}</p>
-                            <p><strong>Subject:</strong> ${newTicket.subject}</p>
-                            <hr style="border: none; border-top: 1px solid #eee;" />
-                            <p>${newTicket.description}</p>
-                        </div>
-                    </div>
-                `
+                htmlbody: `
+    <div style="font-family: sans-serif; padding: 20px;">
+      <h2>New Support Ticket Received</h2>
+      <p>A new support ticket has been created by <strong>${userDetails.name} (${userDetails.email})</strong>.</p>
+      <div style="border: 1px solid #ddd; padding: 15px; margin-top: 20px;">
+        <p><strong>Ticket ID:</strong> #${newTicket.id}</p>
+        <p><strong>Subject:</strong> ${newTicket.subject}</p>
+        <hr style="border: none; border-top: 1px solid #eee;" />
+        <p>${newTicket.description}</p>
+      </div>
+    </div>
+  `,
             });
+
         }
 
         await client.query('COMMIT');

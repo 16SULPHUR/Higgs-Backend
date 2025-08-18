@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 import pool from '../../lib/db.js';
 import bcrypt from 'bcryptjs';
-import { randomBytes } from 'crypto';
-import { resend } from '../../lib/resend.js';
+import { randomBytes } from 'crypto'; 
+import { zeptoClient } from '../../lib/zeptiMail.js';
 
 export const forgotPassword = async (req: Request, res: Response) => {
     const { email } = req.body;
@@ -18,25 +18,35 @@ export const forgotPassword = async (req: Request, res: Response) => {
         const user = userResult.rows[0];
 
         const resetToken = randomBytes(6).toString('hex').toUpperCase();
-        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);  
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
         await pool.query(
             'UPDATE users SET reset_password_token = $1, reset_password_expires_at = $2 WHERE email = $3',
             [resetToken, expiresAt, email]
         );
 
-        await resend.emails.send({
-            from: `Higgs Workspace Security <${process.env.EMAIL_FROM}>`,
-            to: email,
-            subject: 'Your Password Reset Code for Higgs Workspace',
-            html: `
-                <div style="font-family: sans-serif; padding: 20px;">
-                    <h2>Hi ${user.name},</h2>
-                    <p>You requested a password reset. Please use the following code to set a new password. This code is valid for 15 minutes.</p>
-                    <h3 style="text-align: center; letter-spacing: 3px; background-color: #f2f2f2; padding: 10px;">${resetToken}</h3>
-                    <p>If you did not request this, please ignore this email.</p>
-                </div>
-            `
+        await zeptoClient.sendMail({
+            from: {
+                address: process.env.EMAIL_FROM as string,
+                name: "Higgs Workspace Security",
+            },
+            to: [
+                {
+                    email_address: {
+                        address: email,
+                        name: user.name, 
+                    },
+                },
+            ],
+            subject: "Your Password Reset Code for Higgs Workspace",
+            htmlbody: `
+    <div style="font-family: sans-serif; padding: 20px;">
+      <h2>Hi ${user.name},</h2>
+      <p>You requested a password reset. Please use the following code to set a new password. This code is valid for 15 minutes.</p>
+      <h3 style="text-align: center; letter-spacing: 3px; background-color: #f2f2f2; padding: 10px;">${resetToken}</h3>
+      <p>If you did not request this, please ignore this email.</p>
+    </div>
+  `,
         });
 
         res.status(200).json({ message: 'A password reset code has been sent to your email address.' });

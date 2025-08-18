@@ -1,11 +1,11 @@
 import bcrypt from 'bcryptjs';
-import pool from '../../lib/db.js';
-import { resend } from '../../lib/resend.js';
+import pool from '../../lib/db.js'; 
 // import jwt from 'jsonwebtoken';
 // import { v4 as uuidv4 } from 'uuid';
 import { Request, Response } from 'express';
 // import { randomUUID } from 'crypto';
 import { generateTokens } from '../../services/token.service.js';
+import { zeptoClient } from '../../lib/zeptiMail.js';
 
 export const register = async (req: Request, res: Response) => {
 
@@ -38,11 +38,22 @@ export const register = async (req: Request, res: Response) => {
             VALUES ($1, $2, $3, $4, $5, $6, 'INDIVIDUAL_USER', $7, TRUE, 0)
         `, [name, email, hashed, phone, otp, otpExpiresAt, location_id]);
 
-        await resend.emails.send({
-            from: `Higgs <${process.env.EMAIL_FROM}>`,
-            to: email,
-            subject: 'Verify your email',
-            html: `<p>Your OTP is <strong>${otp}</strong>. It expires in 10 minutes.</p>`
+        await zeptoClient.sendMail({
+            from: {
+                address: process.env.EMAIL_FROM as string,
+                name: "Higgs",
+            },
+            to: [
+                {
+                    email_address: {
+                        address: email
+                    },
+                },
+            ],
+            subject: "Verify your email",
+            htmlbody: `
+    <p>Your OTP is <strong>${otp}</strong>. It expires in 10 minutes.</p>
+  `,
         });
 
         res.status(201).json({ message: 'Registered successfully. Please check your email for the OTP.' });

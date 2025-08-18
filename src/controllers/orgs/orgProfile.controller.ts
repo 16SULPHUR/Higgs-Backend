@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import pool from '../../lib/db.js';
-import uploadImage from '../../services/uploadImage.js';
-import { resend } from '../../lib/resend.js';
+import uploadImage from '../../services/uploadImage.js'; 
+import { zeptoClient } from '../../lib/zeptiMail.js';
 
 export const updateOwnOrgProfile = async (req: Request, res: Response) => {
     const user = (req as any).user;
@@ -22,7 +22,7 @@ export const updateOwnOrgProfile = async (req: Request, res: Response) => {
 
     if (name) { fields.push(`name = $${i++}`); values.push(name); }
     if (email) { fields.push(`email = $${i++}`); values.push(email); }
-    
+
     try {
         if (file) {
             const imageUrl = await uploadImage(file);
@@ -42,23 +42,35 @@ export const updateOwnOrgProfile = async (req: Request, res: Response) => {
         if (rowCount === 0) {
             return res.status(404).json({ message: 'Organization not found.' });
         }
- 
-        await resend.emails.send({
-            from: `Higgs Workspace <${process.env.INVITE_EMAIL_FROM}>`,
-            to: process.env.SUPER_ADMIN_EMAIL_ADDRESS!,
+
+
+        await zeptoClient.sendMail({
+            from: {
+                address: process.env.INVITE_EMAIL_FROM as string,
+                name: "Higgs Workspace",
+            },
+            to: [
+                {
+                    email_address: {
+                        address: process.env.SUPER_ADMIN_EMAIL_ADDRESS as string,
+                        name: "Super Admin",
+                    },
+                },
+            ],
             subject: `Organization Profile Updated: ${rows[0].name}`,
-            html: `
-                <div style="font-family: sans-serif; padding: 20px;">
-                    <h2>Organization Profile Change Notification</h2>
-                    <p>
-                        The organization <strong>${rows[0].name}</strong> (ID: ${orgId}) was just updated 
-                        by their Organization Admin, <strong>${user.name}</strong>.
-                    </p>
-                    <p>Review the changes in the admin panel if necessary.</p>
-                </div>
-            `
+            htmlbody: `
+    <div style="font-family: sans-serif; padding: 20px;">
+      <h2>Organization Profile Change Notification</h2>
+      <p>
+        The organization <strong>${rows[0].name}</strong> (ID: ${orgId}) was just updated 
+        by their Organization Admin, <strong>${user.name}</strong>.
+      </p>
+      <p>Review the changes in the admin panel if necessary.</p>
+    </div>
+  `,
         });
-        
+
+
         res.status(200).json(rows[0]);
 
     } catch (err) {
@@ -74,7 +86,7 @@ export const getOwnOrgProfile = async (req: Request, res: Response) => {
     if (!orgId) {
         return res.status(403).json({ message: 'Forbidden: User is not associated with an organization.' });
     }
-    
+
     try {
         const { rows } = await pool.query('SELECT * FROM organizations WHERE id = $1', [orgId]);
         if (rows.length === 0) return res.status(404).json({ message: 'Organization not found.' });

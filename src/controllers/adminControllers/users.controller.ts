@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 import pool from '../../lib/db.js';
 import bcrypt from 'bcryptjs';
-import { randomBytes } from 'crypto';
-import { resend } from '../../lib/resend.js';
+import { randomBytes } from 'crypto'; 
+import { zeptoClient } from '../../lib/zeptiMail.js';
 // import { ROLES } from '../../lib/constants.js';
 
 export const createNewUserByAdmin = async (req: Request, res: Response) => {
@@ -34,25 +34,36 @@ export const createNewUserByAdmin = async (req: Request, res: Response) => {
             RETURNING id, name, email;
         `;
         const values = [name, email, hashedPassword, phone, role.startsWith('ORG_') ? organization_id : null];
-        
+
         const { rows } = await client.query(query, values);
-        
-        await resend.emails.send({
-            from: `Higgs Workspace <${process.env.EMAIL_FROM}>`,
-            to: email,
-            subject: 'Your Higgs Workspace Account has been Created',
-            html: `
-                <div style="font-family: sans-serif; padding: 20px; color: #333;">
-                    <h2>Welcome, ${name}!</h2>
-                    <p>An administrator has created an account for you at Higgs Workspace. You can now log in using the credentials below.</p>
-                    <div style="border: 1px solid #ddd; padding: 15px; margin: 20px 0; background-color: #f9f9f9;">
-                        <p><strong>Email:</strong> ${email}</p>
-                        <p><strong>Password:</strong> ${generatedPassword}</p>
-                    </div>
-                    <p>We recommend changing your password after your first login via your profile page.</p>
-                </div>
-            `,
+
+        await zeptoClient.sendMail({
+            from: {
+                address: process.env.EMAIL_FROM as string, // e.g. noreply@higgs.in
+                name: "Higgs Workspace",
+            },
+            to: [
+                {
+                    email_address: {
+                        address: email,
+                        name: name,
+                    },
+                },
+            ],
+            subject: "Your Higgs Workspace Account has been Created",
+            htmlbody: `
+    <div style="font-family: sans-serif; padding: 20px; color: #333;">
+      <h2>Welcome, ${name}!</h2>
+      <p>An administrator has created an account for you at Higgs Workspace. You can now log in using the credentials below.</p>
+      <div style="border: 1px solid #ddd; padding: 15px; margin: 20px 0; background-color: #f9f9f9;">
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Password:</strong> ${generatedPassword}</p>
+      </div>
+      <p>We recommend changing your password after your first login via your profile page.</p>
+    </div>
+  `,
         });
+
 
         await client.query('COMMIT');
         res.status(201).json({ message: 'User created successfully. A welcome email with credentials has been sent.', user: rows[0] });
@@ -106,14 +117,14 @@ export const updateUserByAdmin = async (req: Request, res: Response) => {
     const fields = [];
     const values = [];
     let i = 1;
-    
+
     const addField = (key: string, value: any) => {
         if (value !== undefined) {
             fields.push(`${key} = $${i++}`);
             values.push(value);
         }
     };
-    
+
     addField('name', name);
     addField('phone', phone);
     addField('role', role);

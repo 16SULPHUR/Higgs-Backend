@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import router from './routes/index.js';
 import pool from './lib/db.js';
+import { zeptoClient } from './lib/zeptiMail.js';
 
 const app = express();
 
@@ -21,8 +22,6 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: false }));
 
-
-
 app.get('/', (req, res) => {
   console.log(req.body);
   res.send('Welcome to the Higgs API!');
@@ -37,6 +36,32 @@ app.get('/test', async (req, res) => {
   const end = Date.now();
   console.log('Database query executed');
   console.log(`DB Response time: ${end - start}ms`);
+
+  await zeptoClient.sendMail({
+    "from": {
+      address: process.env.INVITE_EMAIL_FROM as string,
+      name: "Higgs Workspace",
+    },
+    "to": [
+      {
+        email_address: {
+          address: "ankit@shipfast.studio",
+          name: "ANKIT",
+        },
+      },
+    ],
+    "subject": `Meeting Invitation: at Higgs Workspace`,
+    "htmlbody": `
+                  <div style="font-family: sans-serif; padding: 20px; color: #333;">
+                  <h2>Hello ANKIT,</h2>
+                  <p><strong>ANKIT</strong> has invited you to a meeting at Higgs Workspace.</p>
+                  <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-top: 20px;">
+          <h3 style="margin-top: 0;">Meeting Details</h3>
+          
+        </div>
+        </div>
+        `,
+  });
 
 
   res.send('Welcome to the Higgs API!');

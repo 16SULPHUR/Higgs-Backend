@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import pool from '../../lib/db.js';
-import { resend } from '../../lib/resend.js';
- 
+import pool from '../../lib/db.js'; 
+import { zeptoClient } from '../../lib/zeptiMail.js';
+
 export const getEventRegistrations = async (req: Request, res: Response) => {
     const { eventId } = req.params;
     try {
@@ -36,7 +36,7 @@ export const getEventRegistrations = async (req: Request, res: Response) => {
             ORDER BY registration_date DESC;
         `;
         const { rows } = await pool.query(query, [eventId]);
-        
+
         const members = rows.filter(r => r.registration_type === 'MEMBER');
         const guests = rows.filter(r => r.registration_type === 'GUEST');
 
@@ -84,12 +84,26 @@ export const registerInEvent = async (req: Request, res: Response) => {
         console.log("details")
         console.log(detailsResult.rows)
 
-        await resend.emails.send({
-            from: `Higgs Workspace <${process.env.INVITE_EMAIL_FROM}>`,
-            to: details.email,
+        await zeptoClient.sendMail({
+            from: {
+                address: process.env.INVITE_EMAIL_FROM as string,
+                name: "Higgs Workspace",
+            },
+            to: [
+                {
+                    email_address: {
+                        address: details.email,
+                        name: details.name,
+                    },
+                },
+            ],
             subject: `You're registered for ${details.title}!`,
-            html: `<p>Hi ${details.name},</p><p>You have successfully registered for our upcoming event: <strong>${details.title}</strong>. We look forward to seeing you there!</p>`,
+            htmlbody: `
+    <p>Hi ${details.name},</p>
+    <p>You have successfully registered for our upcoming event: <strong>${details.title}</strong>. We look forward to seeing you there!</p>
+  `,
         });
+
 
 
         res.json(rows);

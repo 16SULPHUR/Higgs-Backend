@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
-import pool from '../../lib/db.js';
-import { resend } from '../../lib/resend.js'; 
-
+import pool from '../../lib/db.js'; 
+import { zeptoClient } from '../../lib/zeptiMail.js';
 
 const MAX_BOOKING_DAYS_AHEAD = 3;
 const COOLDOWN_WINDOW_MINUTES = 30;
@@ -180,16 +179,29 @@ export const createBooking = async (req: Request, res: Response) => {
         await client.query('COMMIT');
 
         const bookingDetailsQuery = `SELECT u.name, u.email, tor.name as type_name, r.name as instance_name, b.start_time FROM bookings b JOIN users u ON b.user_id = u.id JOIN rooms r ON b.room_id = r.id JOIN type_of_rooms tor ON r.type_of_room_id = tor.id WHERE b.id = $1`;
-    const detailsResult = await pool.query(bookingDetailsQuery, [rows[0].id]);
-    const details = detailsResult.rows[0];
-    
-    await resend.emails.send({
-                   from: `Higgs Workspace <${process.env.INVITE_EMAIL_FROM}>`,
+        const detailsResult = await pool.query(bookingDetailsQuery, [rows[0].id]);
+        const details = detailsResult.rows[0];
 
-        to: details.email,
-        subject: `Booking Confirmed: ${details.type_name}`,
-        html: `<p>Hi ${details.name},</p><p>Your booking for <strong>${details.type_name} (${details.instance_name})</strong> on ${new Date(details.start_time).toDateString()} is confirmed.</p>`,
-    });
+        await zeptoClient.sendMail({
+            from: {
+                address: process.env.INVITE_EMAIL_FROM as string,
+                name: "Higgs Workspace",
+            },
+            to: [
+                {
+                    email_address: {
+                        address: details.email,
+                        name: details.name,
+                    },
+                },
+            ],
+            subject: `Booking Confirmed: ${details.type_name}`,
+            htmlbody: `
+    <p>Hi ${details.name},</p>
+    <p>Your booking for <strong>${details.type_name} (${details.instance_name})</strong> on ${new Date(details.start_time).toDateString()} is confirmed.</p>
+  `,
+        });
+
 
 
         res.status(201).json(rows[0]);
@@ -283,15 +295,29 @@ export const cancelBooking = async (req: Request, res: Response) => {
         await client.query('COMMIT');
 
         const bookingDetailsQuery = `SELECT u.name, u.email, tor.name as type_name FROM bookings b JOIN users u ON b.user_id = u.id JOIN rooms r ON b.room_id = r.id JOIN type_of_rooms tor ON r.type_of_room_id = tor.id WHERE b.id = $1`;
-    const detailsResult = await pool.query(bookingDetailsQuery, [bookingId]);
-    const details = detailsResult.rows[0];
+        const detailsResult = await pool.query(bookingDetailsQuery, [bookingId]);
+        const details = detailsResult.rows[0];
 
-    await resend.emails.send({
-        from:  `Higgs Workspace <${process.env.INVITE_EMAIL_FROM}>`,
-        to: details.email,
-        subject: `Booking Cancelled: ${details.type_name}`,
-        html: `<p>Hi ${details.name},</p><p>Your booking for <strong>${details.type_name}</strong> has been successfully cancelled.</p>`,
-    });
+        await zeptoClient.sendMail({
+            from: {
+                address: process.env.INVITE_EMAIL_FROM as string,
+                name: "Higgs Workspace",
+            },
+            to: [
+                {
+                    email_address: {
+                        address: details.email,
+                        name: details.name,
+                    },
+                },
+            ],
+            subject: `Booking Cancelled: ${details.type_name}`,
+            htmlbody: `
+    <p>Hi ${details.name},</p>
+    <p>Your booking for <strong>${details.type_name}</strong> has been successfully cancelled.</p>
+  `,
+        });
+
 
         res.status(200).json({ message: 'Booking cancelled successfully.', booking: rows[0] });
 
@@ -423,7 +449,7 @@ export const rescheduleBooking = async (req: Request, res: Response) => {
         const newRoomTypeResult = await client.query('SELECT credits_per_booking FROM type_of_rooms WHERE id = $1', [new_type_of_room_id]);
         if (newRoomTypeResult.rowCount === 0) { throw new Error('New room type not found.'); }
         const newCost = newRoomTypeResult.rows[0].credits_per_booking;
-        
+
         const findInstanceQuery = `
             SELECT id FROM rooms
             WHERE type_of_room_id = $1 AND is_active = TRUE AND id NOT IN (
@@ -436,9 +462,9 @@ export const rescheduleBooking = async (req: Request, res: Response) => {
             return res.status(409).json({ message: 'The new time slot is no longer available.' });
         }
         const newAllocatedRoomId = availableRoomResult.rows[0].id;
-        
+
         const creditDifference = oldBooking.old_cost - newCost;
-        
+
         // --- THIS IS THE ONLY MODIFIED LOGIC BLOCK ---
         if (user.role === 'ORG_ADMIN' || user.role === 'ORG_USER') {
             await client.query('UPDATE organizations SET credits_pool = credits_pool + $1 WHERE id = $2', [creditDifference, user.organization_id]);
@@ -446,18 +472,18 @@ export const rescheduleBooking = async (req: Request, res: Response) => {
             await client.query('UPDATE users SET individual_credits = individual_credits + $1 WHERE id = $2', [creditDifference, user.id]);
         }
         // ---------------------------------------------
-        
+
         const { rows: updatedBookingRows } = await client.query(
             `UPDATE bookings SET room_id = $1, start_time = $2, end_time = $3, status = 'CONFIRMED' WHERE id = $4 RETURNING *`,
             [newAllocatedRoomId, new_start_time, new_end_time, bookingId]
         );
 
         const guestsResult = await client.query('SELECT guest_name, guest_email FROM guest_invitations WHERE booking_id = $1', [bookingId]);
-        
-        if (guestsResult.rows.length > 0) { 
+
+        if (guestsResult.rows.length > 0) {
             const inviterResult = await client.query('SELECT name FROM users WHERE id = $1', [user.id]);
             const inviter_name = inviterResult.rows[0]?.name || 'A colleague';
- 
+
             const roomDetailsQuery = `
                 SELECT r.name as room_instance_name, tor.name as room_type_name, l.name as location_name, l.address as location_address
                 FROM rooms r
@@ -472,14 +498,40 @@ export const rescheduleBooking = async (req: Request, res: Response) => {
             const newEndTime = new Date(new_end_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' });
             const newDate = new Date(new_start_time).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 
-            const emailPromises = guestsResult.rows.map(guest => 
-                resend.emails.send({
-                    from: `Higgs Workspace <${process.env.INVITE_EMAIL_FROM}>`,
-                    to: guest.guest_email,
+            const emailPromises = guestsResult.rows.map((guest) =>
+                zeptoClient.sendMail({
+                    from: {
+                        address: process.env.INVITE_EMAIL_FROM as string,
+                        name: "Higgs Workspace",
+                    },
+                    to: [
+                        {
+                            email_address: {
+                                address: guest.guest_email,
+                                name: guest.guest_name,
+                            },
+                        },
+                    ],
                     subject: `Update: Your Meeting at Higgs Workspace has been Rescheduled`,
-                    html: `<div style="font-family: sans-serif; padding: 20px; color: #333;"><h2>Hello ${guest.guest_name},</h2><p>Please note, your meeting with <strong>${inviter_name}</strong> has been updated.</p><p style="color: #d9534f;">Please disregard any previous invitations.</p><div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-top: 20px;"><h3 style="margin-top: 0;">New Meeting Details</h3><p><strong>Room:</strong> ${detailsForEmail.room_type_name} (${detailsForEmail.room_instance_name})</p><p><strong>Date:</strong> ${newDate}</p><p><strong>Time:</strong> ${newStartTime} - ${newEndTime} (IST)</p><p><strong>Location:</strong> ${detailsForEmail.location_name}</p><p style="font-size: 0.9em; color: #555;">${detailsForEmail.location_address}</p></div><p style="margin-top: 30px; font-size: 0.8em; color: #777;">This is an automated notification.</p></div>`
+                    htmlbody: `
+      <div style="font-family: sans-serif; padding: 20px; color: #333;">
+        <h2>Hello ${guest.guest_name},</h2>
+        <p>Please note, your meeting with <strong>${inviter_name}</strong> has been updated.</p>
+        <p style="color: #d9534f;">Please disregard any previous invitations.</p>
+        <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-top: 20px;">
+          <h3 style="margin-top: 0;">New Meeting Details</h3>
+          <p><strong>Room:</strong> ${detailsForEmail.room_type_name} (${detailsForEmail.room_instance_name})</p>
+          <p><strong>Date:</strong> ${newDate}</p>
+          <p><strong>Time:</strong> ${newStartTime} - ${newEndTime} (IST)</p>
+          <p><strong>Location:</strong> ${detailsForEmail.location_name}</p>
+          <p style="font-size: 0.9em; color: #555;">${detailsForEmail.location_address}</p>
+        </div>
+        <p style="margin-top: 30px; font-size: 0.8em; color: #777;">This is an automated notification.</p>
+      </div>
+    `,
                 })
             );
+
 
             await Promise.all(emailPromises);
         }

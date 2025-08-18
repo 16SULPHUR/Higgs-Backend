@@ -20,6 +20,7 @@ import { adminUsersRoutes, usersRoutes, publicUsersRoutes } from './users.route.
 import { adminOrgsRoutes, orgAdminOrgsRoutes } from './orgs.route.js';
 import supportTicketsRouter from './adminSupportTicketsRoutes.js';
 import userSupportTicketsRouter from './userSupportTicketsRoutes.js';
+import locationAdminsRoutes from './locationAdmins.route.js';
 
 const router = Router();
 
@@ -67,5 +68,6 @@ router.use('/public/locations', publicLocationsRoutes);
 
 router.use('/admin/support-tickets', (req, res, next) => authorizeAdmin(req, res, next), supportTicketsRouter);
 
+router.use('/admin/location-admins', (req, res, next) => authorizeAdmin(req, res, next), locationAdminsRoutes);
 
 export default router;

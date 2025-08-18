@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import pool from '../../lib/db.js';
-import { resend } from '../../lib/resend.js';
+import pool from '../../lib/db.js'; 
+import { zeptoClient } from '../../lib/zeptiMail.js';
 
 export const assignCredits = async (req: Request, res: Response) => {
     const { id } = req.params;
@@ -45,11 +45,24 @@ export const assignCredits = async (req: Request, res: Response) => {
 
             if (orgAdminResult.rowCount > 0) {
                 const orgAdmin = orgAdminResult.rows[0];
-                await resend.emails.send({
-                    from: `Higgs Workspace <${process.env.INVITE_EMAIL_FROM}>`,
-                    to: orgAdmin.email,
-                    subject: 'Credits have been added to your organization',
-                    html: `<p>Hi ${orgAdmin.name},</p><p>An administrator has added <strong>${creditsToAssign} credits</strong> to your organization's pool. Your new balance is ${rows[0].credits_pool}.</p>`,
+                await zeptoClient.sendMail({
+                    from: {
+                        address: process.env.INVITE_EMAIL_FROM as string,
+                        name: "Higgs Workspace",
+                    },
+                    to: [
+                        {
+                            email_address: {
+                                address: orgAdmin.email,
+                                name: orgAdmin.name,
+                            },
+                        },
+                    ],
+                    subject: "Credits have been added to your organization",
+                    htmlbody: `
+    <p>Hi ${orgAdmin.name},</p>
+    <p>An administrator has added <strong>${creditsToAssign} credits</strong> to your organization's pool. Your new balance is ${rows[0].credits_pool}.</p>
+  `,
                 });
             }
 

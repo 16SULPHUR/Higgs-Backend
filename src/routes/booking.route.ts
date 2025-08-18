@@ -21,6 +21,7 @@ bookingsRoutes.get('/:id', authorize([ROLES.ADMIN, ROLES.ORG_ADMIN, ROLES.INDIVI
 bookingsRoutes.delete('/:id', authorize([ROLES.ADMIN, ROLES.ORG_ADMIN, ROLES.INDIVIDUAL_USER, ROLES.ORG_USER]), cancelBooking);
 
 bookingsRoutes.post('/:bookingId/invite', authorize([ROLES.ADMIN, ROLES.ORG_ADMIN, ROLES.INDIVIDUAL_USER, ROLES.ORG_USER]), bulkInviteToBooking);
+
 // bookingsRoutes.post('/:bookingId/invite', authorize([ROLES.ADMIN, ROLES.ORG_ADMIN, ROLES.INDIVIDUAL_USER, ROLES.ORG_USER]), inviteGuestToBooking);
 
 bookingsRoutes.get('/:bookingId/invitations', authorize([ROLES.ADMIN, ROLES.ORG_ADMIN, ROLES.INDIVIDUAL_USER, ROLES.ORG_USER]), getBookingInvitations);
