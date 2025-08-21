@@ -3,7 +3,6 @@ import pool from '../../lib/db.js';
 import { zeptoClient } from '../../lib/zeptiMail.js';
 
 const MAX_BOOKING_DAYS_AHEAD = 3;
-const COOLDOWN_WINDOW_MINUTES = 30;
 
 const CANCELLATION_MINUTES_BEFORE = 15;
 const MAX_CANCELLATIONS_PER_MONTH = 5;
@@ -125,21 +124,7 @@ export const createBooking = async (req: Request, res: Response) => {
             return res.status(402).json({ message: 'Insufficient credits for this booking.' });
         }
 
-        const cooldownStart = new Date(startMillis - COOLDOWN_WINDOW_MINUTES * 60 * 1000).toISOString();
-        const cooldownEnd = new Date(endMillis + COOLDOWN_WINDOW_MINUTES * 60 * 1000).toISOString();
-
-        const cooldownConflictResult = await client.query(
-            `SELECT * FROM bookings
-             WHERE user_id = $1
-             AND status = 'CONFIRMED'
-             AND (start_time < $3 AND end_time > $2)`,
-            [user.id, cooldownStart, cooldownEnd]
-        );
-
-        if (cooldownConflictResult.rowCount > 0) {
-            await client.query('ROLLBACK');
-            return res.status(409).json({ message: `You have another booking within the ${COOLDOWN_WINDOW_MINUTES}-minute cooldown period.` });
-        }
+        
 
         const roomQuery = `
             SELECT id FROM rooms
