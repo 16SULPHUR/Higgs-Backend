@@ -18,31 +18,30 @@ export const searchAvailableRoomTypes = async (req: Request, res: Response) => {
 
 
         const query = `
-            SELECT
-                DISTINCT
+            SELECT DISTINCT
                 tor.id,
                 tor.name,
                 tor.capacity,
                 tor.credits_per_booking,
                 tor.room_icon,
+                tor.is_fcfs,
                 l.name as location_name
-            FROM
-                rooms r
-            JOIN
-                type_of_rooms tor ON r.type_of_room_id = tor.id
-            JOIN
-                locations l ON tor.location_id = l.id
-            LEFT JOIN
-                -- Find bookings that CONFLICT with the desired time slot
-                bookings b ON r.id = b.room_id
-                    AND b.status = 'CONFIRMED'
-                    AND b.start_time < $3 AND b.end_time > $2
-            WHERE
-                r.is_active = TRUE          -- The physical room instance must be active
-                AND tor.capacity >= $1      -- The room type must have enough capacity
-                AND b.id IS NULL            -- This is the key: only include rooms where no conflicting booking was found
-            ORDER BY
-                tor.capacity ASC;
+            FROM rooms r
+            JOIN type_of_rooms tor ON r.type_of_room_id = tor.id
+            JOIN locations l ON tor.location_id = l.id
+            LEFT JOIN bookings b ON r.id = b.room_id
+                AND b.status = 'CONFIRMED'
+                AND b.start_time < $3 AND b.end_time > $2
+            WHERE r.is_active = TRUE
+              AND tor.capacity >= $1
+              AND (
+                    tor.is_fcfs = TRUE
+                 OR (
+                    tor.is_fcfs = FALSE
+                    AND b.id IS NULL
+                 )
+              )
+            ORDER BY tor.capacity ASC;
         `;
 
 

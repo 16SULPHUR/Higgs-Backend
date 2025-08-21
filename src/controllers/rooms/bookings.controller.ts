@@ -90,7 +90,7 @@ export const createBooking = async (req: Request, res: Response) => {
         await client.query('BEGIN');
 
         const roomTypeResult = await client.query(
-            'SELECT credits_per_booking FROM type_of_rooms WHERE id = $1',
+            'SELECT credits_per_booking, is_fcfs FROM type_of_rooms WHERE id = $1',
             [type_of_room_id]
         );
 
@@ -100,6 +100,12 @@ export const createBooking = async (req: Request, res: Response) => {
         }
 
         const roomCost = roomTypeResult.rows[0].credits_per_booking;
+        const isFcfsType = roomTypeResult.rows[0].is_fcfs === true;
+
+        if (isFcfsType) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ message: 'This room type is first-come-first-serve and cannot be booked.' });
+        }
         let hasSufficientCredits = false;
 
         if (user.role === 'ORG_ADMIN' || user.role === 'ORG_USER') {
