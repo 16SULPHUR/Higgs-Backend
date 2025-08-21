@@ -1,5 +1,5 @@
 import express from 'express';
-import { addUserToOrg, createNewUserByAdmin, getAllUsers, getAllUsersForMemberBook, getInvitableUsers, removeUserFromOrg, getPublicMemberNames } from '../controllers/users/users.controller.js'; 
+import { addUserToOrg, createNewUserByAdmin, getAllUsers, getAllUsersForMemberBook, getInvitableUsers, removeUserFromOrg } from '../controllers/users/users.controller.js'; 
 import { deleteUserByAdmin, getAllUsersForAdmin, getUserByIdForAdmin, updateUserByAdmin } from '../controllers/adminControllers/users.controller.js';
 
 const adminUsersRoutes = express.Router();
@@ -7,9 +7,9 @@ const usersRoutes = express.Router();
 
 
 usersRoutes.get('/member-book', getAllUsersForMemberBook);
-// Public route for SSG: only id + name
+
 export const publicUsersRoutes = express.Router();
-publicUsersRoutes.get('/member-names', getPublicMemberNames);
+publicUsersRoutes.get('/member-book', getAllUsersForMemberBook);
 usersRoutes.get('/invitable', getInvitableUsers);
 
 adminUsersRoutes.get('/summary', getAllUsers);
