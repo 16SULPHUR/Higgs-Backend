@@ -19,8 +19,7 @@ adminAuthRoutes.post(
 );
 
 adminAuthRoutes.get('/me', (req, res, next) => authorizeAdmin(req, res, next), getMe);
-
-// Admin password reset
+ 
 adminAuthRoutes.post('/forgot-password', adminForgotPassword);
 adminAuthRoutes.post('/reset-password', adminResetPassword);
 

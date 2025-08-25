@@ -44,3 +44,13 @@ export const authorizeAdmin = async (req: Request, res: Response, next: NextFunc
         }
     
 };
+
+export const requireSuperAdmin = (req: Request, res: Response, next: NextFunction) => {
+    if (!req.admin) {
+        return res.status(401).json({ message: 'Not authenticated as admin.' });
+    }
+    if (req.admin.role !== 'SUPER_ADMIN') {
+        return res.status(403).json({ message: 'Super admin privileges required.' });
+    }
+    next();
+};
