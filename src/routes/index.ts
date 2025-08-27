@@ -64,7 +64,6 @@ router.use('/admin/assign-credits', (req, res, next) => authorizeAdmin(req, res,
 
 router.use('/admin/locations', locationsRoutes);
 
-// Public locations for signup
 router.use('/public/locations', publicLocationsRoutes);
 
 router.use('/admin/support-tickets', (req, res, next) => authorizeAdmin(req, res, next), supportTicketsRouter);

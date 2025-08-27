@@ -12,9 +12,9 @@ export const register = async (req: Request, res: Response) => {
     const { name, email, password, phone, location_id } = req.body;
 
 
-    if (!name || !email || !password || !phone || !location_id) {
+    if (!name || !email || !password || !phone) {
         return res.status(400).json({
-            message: 'All fields are required: name, email, password, phone, and location_id.'
+            message: 'All fields are required: name, email, password, and phone.'
         });
     }
 
@@ -24,9 +24,12 @@ export const register = async (req: Request, res: Response) => {
             return res.status(400).json({ message: 'Email already exists' });
         }
 
-        const locationCheck = await pool.query('SELECT id FROM locations WHERE id = $1', [location_id]);
-        if (locationCheck.rowCount === 0) {
-            return res.status(400).json({ message: 'Invalid location_id provided. Location does not exist.' });
+        // Location is now optional - only validate if provided
+        if (location_id) {
+            const locationCheck = await pool.query('SELECT id FROM locations WHERE id = $1', [location_id]);
+            if (locationCheck.rowCount === 0) {
+                return res.status(400).json({ message: 'Invalid location_id provided. Location does not exist.' });
+            }
         }
 
         const hashed = await bcrypt.hash(password, parseInt(process.env.SALT!));
@@ -36,7 +39,7 @@ export const register = async (req: Request, res: Response) => {
         await pool.query(`
             INSERT INTO users (name, email, password, phone, otp, otp_expires_at, role, location_id, is_active, individual_credits)
             VALUES ($1, $2, $3, $4, $5, $6, 'INDIVIDUAL_USER', $7, TRUE, 0)
-        `, [name, email, hashed, phone, otp, otpExpiresAt, location_id]);
+        `, [name, email, hashed, phone, otp, otpExpiresAt, location_id || null]);
 
         await zeptoClient.sendMail({
             from: {

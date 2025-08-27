@@ -7,7 +7,7 @@ import { zeptoClient } from './lib/zeptiMail.js';
 const app = express();
 
 app.use(cors({
-  origin: ['http://localhost:3000', 'https://higgs-frontend.shipfast.studio'],
+  origin: ['http://localhost:3000', 'https://higgs-frontend.shipfast.studio', 'https://app.higgs.in'],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
     'Origin',
