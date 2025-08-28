@@ -1,7 +1,7 @@
-const { Pool } = require("pg");
-const { zeptoClient } = require("./lib/zeptomail"); // shared client
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+import dotenv from "dotenv";
+dotenv.config();
+import pool from "../lib/db.js";
+import { zeptoClient } from "../lib/zeptiMail.js";
 
 async function sendWeeklySummary() {
   console.log("Starting weekly support ticket summary generation...");

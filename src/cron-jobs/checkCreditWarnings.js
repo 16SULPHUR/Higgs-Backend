@@ -1,7 +1,7 @@
-const { Pool } = require("pg");
-const { zeptoClient } = require("./lib/zeptomail"); // import the Zepto client you exported
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+import dotenv from "dotenv";
+dotenv.config();
+import pool from "../lib/db.js";
+import { zeptoClient } from "../lib/zeptiMail.js";
 
 async function checkCreditWarnings() {
   const client = await pool.connect();
@@ -22,7 +22,7 @@ async function checkCreditWarnings() {
 
       await zeptoClient.sendMail({
         from: {
-          address: process.env.EMAIL_FROM,
+          address: process.env.INVITE_EMAIL_FROM,
           name: "Higgs Workspace",
         },
         to: [

@@ -27,7 +27,11 @@
   "scripts": {
     "dev": "nodemon --trace-warnings --watch src --ext ts --exec \"node --loader ts-node/esm src/main.ts\"",
     "build": "tsc",
-    "start": "node build/src/main.js"
+    "start": "node build/src/main.js",
+    "cron:meeting-alerts": "node src/cron-jobs/meetingAlerts.js",
+    "cron:events-reminders": "node src/cron-jobs/sendEventReminders.js",
+    "cron:credits-warnings": "node src/cron-jobs/checkCreditWarnings.js",
+    "cron:weekly-tickets": "node src/cron-jobs/sendWeeklyTicketSummary.js"
   },
   "author": "Ankit Patil <16SULPHUR@users.noreply.github.com>",
   "license": "Apache-2.0",

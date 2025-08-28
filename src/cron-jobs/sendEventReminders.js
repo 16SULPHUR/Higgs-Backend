@@ -1,7 +1,7 @@
-const { Pool } = require("pg");
-const { zeptoClient } = require("./lib/zeptomail"); // import shared client
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+import dotenv from "dotenv";
+dotenv.config();
+import pool from "../lib/db.js";
+import { zeptoClient } from "../lib/zeptiMail.js";
 
 async function sendEventReminders() {
   const client = await pool.connect();
@@ -29,7 +29,7 @@ async function sendEventReminders() {
 
         await zeptoClient.sendMail({
           from: {
-            address: process.env.EMAIL_FROM,
+            address: process.env.INVITE_EMAIL_FROM,
             name: "Higgs Workspace",
           },
           to: [
