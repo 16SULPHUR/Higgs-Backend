@@ -1,8 +1,8 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import pool from '../lib/db.js';
-import { zeptoClient } from '../lib/zeptiMail.js';
+import pool from '../../build/src/lib/db.js';
+import { zeptoClient } from '../../build/src/lib/zeptiMail.js';
 
 async function fetchBookingRecipients(client, bookingId) {
   const ownerQuery = `
