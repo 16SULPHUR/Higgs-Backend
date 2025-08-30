@@ -74,7 +74,7 @@ export const createOrPromoteSuperAdmin = async (req: Request, res: Response) => 
  
             const tempPassword = randomBytes(10).toString('hex');
             const hashedPassword = await bcrypt.hash(tempPassword, parseInt(process.env.SALT!));
-
+            
             const { rows: inserted } = await client.query(
                 `INSERT INTO admins (name, email, password, role, location_id, is_active, reset_password_token, reset_password_expires_at)
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -120,7 +120,7 @@ export const createOrPromoteSuperAdmin = async (req: Request, res: Response) => 
         return res.status(400).json({ message: 'Invalid mode. Use "invite" or "promote".' });
     } catch (err) {
         await client.query('ROLLBACK');
-        console.error('Error creating/promoting super admin:', err);
+        console.error('Error creating super admin:', err.error.details);
         res.status(500).json({ message: 'Failed to create or promote super admin.' });
     } finally {
         client.release();

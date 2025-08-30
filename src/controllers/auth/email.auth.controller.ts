@@ -202,6 +202,7 @@ export const getMe = async (req: Request, res: Response) => {
                 u.email, 
                 u.role,
                 u.phone,
+                u.profession,
                 u.profile_picture,
                 u.individual_credits,
                 o.id as organization_id,

@@ -6,7 +6,7 @@ import { zeptoClient } from '../../lib/zeptiMail.js';
 // import { ROLES } from '../../lib/constants.js';
 
 export const createNewUserByAdmin = async (req: Request, res: Response) => {
-    const { name, email, phone, role, organization_id } = req.body;
+    const { name, email, phone, profession, role, organization_id } = req.body;
 
     if (!name || !email || !role) {
         return res.status(400).json({ message: 'Name, email, and role are required.' });
@@ -29,11 +29,11 @@ export const createNewUserByAdmin = async (req: Request, res: Response) => {
         const hashedPassword = await bcrypt.hash(generatedPassword, 10);
 
         const query = `
-            INSERT INTO users (name, email, password, phone, role, organization_id, is_verified, created_by_admin)
-            VALUES ($1, $2, $3, $4, $5, $6, TRUE, TRUE)
+            INSERT INTO users (name, email, password, phone, profession, role, organization_id, is_verified, created_by_admin)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, TRUE)
             RETURNING id, name, email;
         `;
-        const values = [name, email, hashedPassword, phone, role.startsWith('ORG_') ? organization_id : null];
+        const values = [name, email, hashedPassword, phone, profession, role.startsWith('ORG_') ? organization_id : null];
 
         const { rows } = await client.query(query, values);
 
@@ -84,7 +84,7 @@ export const getAllUsersForAdmin = async (req: Request, res: Response) => {
     try {
         const query = `
             SELECT 
-                u.id, u.name, u.email, u.phone, u.role, u.is_active, u.profile_picture,
+                u.id, u.name, u.email, u.phone, u.profession, u.role, u.is_active, u.profile_picture,
                 u.individual_credits,
                 o.name as organization_name
             FROM users u
@@ -102,7 +102,7 @@ export const getAllUsersForAdmin = async (req: Request, res: Response) => {
 export const getUserByIdForAdmin = async (req: Request, res: Response) => {
     const { id } = req.params;
     try {
-        const { rows, rowCount } = await pool.query('SELECT id, name, email, phone, role, organization_id, is_active, individual_credits FROM users WHERE id = $1', [id]);
+        const { rows, rowCount } = await pool.query('SELECT id, name, email, phone, profession, role, organization_id, is_active, individual_credits FROM users WHERE id = $1', [id]);
         if (rowCount === 0) return res.status(404).json({ message: 'User not found.' });
         res.json(rows[0]);
     } catch (err) {
@@ -112,7 +112,7 @@ export const getUserByIdForAdmin = async (req: Request, res: Response) => {
 
 export const updateUserByAdmin = async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { name, phone, role, organization_id, is_active } = req.body;
+    const { name, phone, profession, role, organization_id, is_active } = req.body;
 
     const fields = [];
     const values = [];
@@ -127,6 +127,7 @@ export const updateUserByAdmin = async (req: Request, res: Response) => {
 
     addField('name', name);
     addField('phone', phone);
+    addField('profession', profession !== undefined ? profession : null);
     addField('role', role);
     addField('organization_id', organization_id);
     addField('is_active', is_active);

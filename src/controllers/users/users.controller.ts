@@ -9,6 +9,7 @@ export const createNewUserByAdmin = async (req: Request, res: Response) => {
         name,
         email,
         phone,
+        profession,
         role,
         organization_id,
         is_active = true // Optional with default
@@ -52,10 +53,10 @@ export const createNewUserByAdmin = async (req: Request, res: Response) => {
         // Insert the new user
         const insertQuery = `
             INSERT INTO users (
-                name, email, password, phone, role, organization_id,
+                name, email, password, phone, profession, role, organization_id,
                 is_verified, created_by_admin, is_active
             )
-            VALUES ($1, $2, $3, $4, $5, $6, TRUE, TRUE, $7)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, TRUE, $8)
             RETURNING id, name, email;
         `;
 
@@ -64,6 +65,7 @@ export const createNewUserByAdmin = async (req: Request, res: Response) => {
             email,
             hashedPassword,
             phone,
+            profession,
             role,
             role.startsWith('ORG_') ? organization_id : null,
             is_active
@@ -201,6 +203,7 @@ export const getAllUsersForMemberBook = async (req: Request, res: Response) => {
             SELECT 
                 u.id, 
                 u.name,
+                u.profession,
                 u.profile_picture,
                 o.name as organization_name
             FROM users u
